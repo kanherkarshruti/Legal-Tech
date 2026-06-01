@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cleanslate — Dark Pattern Scanner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root{
+    --bg:#0a0b0f;--bg-soft:#11131a;--panel:#14161f;--panel2:#191c27;--border:#252a38;--border2:#323848;
+    --txt:#eef1f7;--txt2:#9aa1b2;--txt3:#646b7e;
+    --lime:#c6f24e;--lime-dim:#a6cf3e;--lime-glow:rgba(198,242,78,.14);
+    --crit:#ff5d5d;--crit-bg:rgba(255,93,93,.12);--high:#ffa64d;--high-bg:rgba(255,166,77,.12);
+    --med:#ffd84d;--med-bg:rgba(255,216,77,.10);--ok:#4ee08f;--ok-bg:rgba(78,224,143,.10);
+    --sora:'Sora',sans-serif;--sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(800px 480px at 78% -8%, var(--lime-glow), transparent 62%),radial-gradient(600px 500px at 0% 8%, rgba(120,140,255,.06), transparent 60%);background-attachment:fixed}
+  ::selection{background:var(--lime);color:#10130a}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{width:30px;height:30px;border-radius:8px;background:var(--lime);display:grid;place-items:center;flex:none;box-shadow:0 0 24px var(--lime-glow)}
+  .mark svg{width:17px;height:17px}
+  .brand .nm{font-family:var(--sora);font-weight:600;font-size:17px;letter-spacing:-.2px}
+  .nav-tag{font-family:var(--mono);font-size:11px;color:var(--txt3);letter-spacing:.5px}
+  @media(max-width:560px){.nav-tag{display:none}}
+  .hero{padding:46px 0 30px;text-align:center}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;letter-spacing:.6px;color:var(--lime-dim);background:var(--lime-glow);border:1px solid rgba(198,242,78,.22);padding:5px 13px;border-radius:999px;margin-bottom:22px}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)}
+  .hero h1{font-family:var(--sora);font-weight:700;font-size:clamp(33px,6vw,54px);line-height:1.05;letter-spacing:-1.4px;max-width:760px;margin:0 auto}
+  .hero h1 .g{color:var(--lime)}
+  .hero p{color:var(--txt2);max-width:540px;margin:20px auto 0;font-size:16.5px;line-height:1.6}
+  .scanner{background:linear-gradient(180deg,var(--panel),var(--bg-soft));border:1px solid var(--border);border-radius:20px;margin-top:38px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.7)}
+  .s-top{display:flex;align-items:center;gap:8px;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--panel2)}
+  .s-dots{display:flex;gap:6px}
+  .s-dots i{width:10px;height:10px;border-radius:50%;display:block}
+  .s-dots i:nth-child(1){background:#ff5f57}.s-dots i:nth-child(2){background:#febc2e}.s-dots i:nth-child(3){background:#28c840}
+  .s-url{flex:1;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--txt3);letter-spacing:.3px}
+  .s-body{padding:22px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--txt2);border-radius:9px;padding:8px 13px;transition:.15s;font-family:var(--sans)}
+  .tab:hover{border-color:var(--txt3);color:var(--txt)}
+  .tab.active{background:var(--lime);color:#10130a;border-color:var(--lime);font-weight:600}
+  textarea{width:100%;min-height:190px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:13px;color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.65;padding:16px;outline:none;transition:.15s}
+  textarea:focus{border-color:var(--lime);box-shadow:0 0 0 4px var(--lime-glow)}
+  textarea::placeholder{color:var(--txt3)}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  select{font-size:14px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;color:var(--txt);outline:none;font-family:var(--sans);cursor:pointer;flex:1;min-width:170px}
+  select:focus{border-color:var(--lime)}
+  .scan-btn{font-family:var(--sora);font-weight:600;font-size:15px;cursor:pointer;background:var(--lime);color:#10130a;border:none;border-radius:11px;padding:13px 26px;display:inline-flex;align-items:center;gap:9px;transition:.15s;box-shadow:0 8px 28px -8px var(--lime)}
+  .scan-btn:hover{transform:translateY(-1px);box-shadow:0 12px 34px -8px var(--lime)}
+  .scan-btn:active{transform:translateY(0)}
+  .scan-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+  .scan-btn svg{width:17px;height:17px}
+  #out{margin-top:22px}
+  .loading{display:flex;flex-direction:column;gap:2px;padding:8px 2px}
+  .lrow{display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--txt2);padding:7px 0;opacity:0;animation:fade .3s forwards}
+  .lrow .s{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--lime);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+  .lrow.done{color:var(--ok)}
+  .lrow .c{color:var(--ok);flex:none;width:14px;text-align:center;font-weight:600}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fade{to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .result{animation:rise .4s}
+  .verdict{display:flex;align-items:center;gap:20px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+  .gauge{flex:none;position:relative;width:92px;height:92px}
+  .gauge svg{transform:rotate(-90deg)}
+  .gauge .gn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge .gn b{font-family:var(--sora);font-weight:700;font-size:27px;line-height:1}
+  .gauge .gn s{font-size:10px;color:var(--txt3);text-decoration:none;margin-top:1px}
+  .verdict .vt h2{font-family:var(--sora);font-size:19px;font-weight:600;letter-spacing:-.2px}
+  .verdict .vt p{color:var(--txt2);font-size:14px;margin-top:4px;line-height:1.5}
+  .src-note{font-family:var(--mono);font-size:10.5px;color:var(--txt3);margin-top:10px;letter-spacing:.3px}
+  .tally{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .tchip{font-family:var(--mono);font-size:12px;font-weight:500;padding:6px 12px;border-radius:9px;display:flex;align-items:center;gap:7px}
+  .tchip .d{width:7px;height:7px;border-radius:50%}
+  .cards{margin-top:14px;display:flex;flex-direction:column;gap:11px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;animation:rise .4s backwards}
+  .c-h{display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .sev{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;padding:4px 9px;border-radius:6px;flex:none}
+  .c-h .pat{font-family:var(--sora);font-size:15.5px;font-weight:600;flex:1;letter-spacing:-.1px}
+  .c-h .gl{font-family:var(--mono);font-size:10.5px;color:var(--txt3);text-align:right;flex:none;max-width:150px}
+  .c-b{padding:0 16px 16px}
+  .quote{font-family:var(--mono);font-size:12px;color:var(--txt2);background:var(--bg);border-left:2px solid var(--border2);border-radius:0 8px 8px 0;padding:10px 13px;line-height:1.55;margin-bottom:12px}
+  .quote span{display:block;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--txt3);margin-bottom:5px}
+  .why{font-size:14px;color:var(--txt2);margin-bottom:13px;line-height:1.55}
+  .fix{background:var(--ok-bg);border:1px solid rgba(78,224,143,.2);border-radius:10px;padding:12px 14px}
+  .fix b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--ok);margin-bottom:5px;font-weight:500}
+  .fix p{font-size:13.5px;color:#d6f7e4;line-height:1.5}
+  .sev.critical{background:var(--crit-bg);color:var(--crit)}
+  .sev.high{background:var(--high-bg);color:var(--high)}
+  .sev.medium{background:var(--med-bg);color:var(--med)}
+  .clean{background:var(--ok-bg);border:1px solid rgba(78,224,143,.25);border-radius:16px;padding:22px;display:flex;gap:14px;align-items:center;animation:rise .4s}
+  .clean .ci{width:42px;height:42px;border-radius:11px;background:rgba(78,224,143,.16);display:grid;place-items:center;flex:none}
+  .clean .ci svg{width:22px;height:22px}
+  .clean h2{font-family:var(--sora);font-size:18px;font-weight:600;color:var(--ok)}
+  .clean p{color:#bfeed4;font-size:14px;margin-top:3px}
+  .ref{padding:60px 0 20px}
+  .ref .rh{text-align:center;margin-bottom:30px}
+  .ref .rh h2{font-family:var(--sora);font-size:28px;font-weight:600;letter-spacing:-.6px}
+  .ref .rh p{color:var(--txt2);margin-top:8px;font-size:14.5px;max-width:480px;margin-left:auto;margin-right:auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+  .pcard{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:16px;transition:.15s}
+  .pcard:hover{border-color:var(--border2);transform:translateY(-2px)}
+  .pcard .pn{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .pcard .num{font-family:var(--mono);font-size:11px;color:var(--lime-dim);font-weight:500}
+  .pcard .nm{font-family:var(--sora);font-size:14.5px;font-weight:600}
+  .pcard .ds{font-size:13px;color:var(--txt2);line-height:1.5}
+  footer{border-top:1px solid var(--border);margin-top:60px}
+  .foot{padding:28px 0 50px;text-align:center}
+  .foot p{font-size:12.5px;color:var(--txt3);max-width:600px;margin:0 auto;line-height:1.6}
+  .foot p b{color:var(--txt2);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3z" fill="#10130a"/><path d="M9 12l2 2 4-4" stroke="#c6f24e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="nm">Cleanslate</span>
+    </div>
+    <span class="nav-tag">CCPA India · dark-pattern scanner</span>
+  </nav>
+  <section class="hero">
+    <div class="pill"><span class="dot"></span>13 patterns · CCPA Guidelines 2023</div>
+    <h1>Find the <span class="g">dark patterns</span><br>before you ship them.</h1>
+    <p>Paste any checkout, signup, cancellation flow, or consent banner. Cleanslate scans it against India's 13 regulated dark-pattern categories and tells you what to fix.</p>
+  </section>
+  <section class="scanner">
+    <div class="s-top">
+      <div class="s-dots"><i></i><i></i><i></i></div>
+      <div class="s-url">cleanslate · flow scanner</div>
+    </div>
+    <div class="s-body">
+      <div class="tabs" id="tabs"></div>
+      <textarea id="flow" placeholder="Paste the on-screen copy, button labels, and steps of a flow."></textarea>
+      <div class="controls">
+        <select id="ptype">
+          <option>E-commerce checkout</option>
+          <option>Signup / onboarding</option>
+          <option>Subscription cancellation</option>
+          <option>Cookie / consent banner</option>
+          <option>Pricing page</option>
+          <option>Mobile app flow</option>
+          <option>Other</option>
+        </select>
+        <button class="scan-btn" id="run">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h4l2-6 4 12 2-6h4" stroke="#10130a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Scan flow
+        </button>
+      </div>
+      <div id="out"></div>
+    </div>
+  </section>
+  <section class="ref">
+    <div class="rh">
+      <div class="pill"><span class="dot"></span>the rulebook</div>
+      <h2>13 regulated dark patterns</h2>
+      <p>Defined in the CCPA Guidelines for Prevention &amp; Regulation of Dark Patterns, 2023 — the categories Cleanslate scans against.</p>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</div>
+<footer>
+  <div class="wrap foot">
+    <p><b>Decision-support, not legal advice.</b> Cleanslate flags likely matches against the CCPA's 2023 dark-pattern categories to help teams review a flow before launch. Findings should be confirmed by a qualified reviewer.</p>
+  </div>
+</footer>
+
+<script>
+var PATTERNS=[
+  {n:"False Urgency",d:"Falsely creating scarcity or time pressure to force a quick action.",
+   kw:["hurry","selling fast","limited time","ends in","countdown","people viewing","seats left","spots left","only 1 left","only 2 left","only 3 left","fare may rise","offer expires","selling out"]},
+  {n:"Basket Sneaking",d:"Adding items or charges at checkout without the user's consent.",
+   kw:["is pre-ticked","is pre-checked","is pre-selected","pre-ticked checkbox","auto-added","automatically added","bundled with","added to your cart","charity","donation of","add-on (","add-on is"]},
+  {n:"Confirm Shaming",d:"Using guilt or fear in the wording to steer a user's choice.",
+   kw:["no, i don't","no i don't","i don't want to save","risk losing","you'll lose","miss out","i'll pay full","no thanks, i"]},
+  {n:"Forced Action",d:"Requiring a purchase, sign-up, or data-share to access a service.",
+   kw:["requires accepting","no way to","must accept","required to","cannot continue without","forced to","mandatory","share your details","to proceed you must"]},
+  {n:"Subscription Trap",d:"Making cancellation hard, hidden, or harder than signing up.",
+   kw:["cancel","cancellation","unsubscribe","account > ","manage > ","keep my benefits","paused your account","survey must","not in settings","to leave"]},
+  {n:"Interface Interference",d:"Design that hides or downplays the option the user wants.",
+   kw:["light grey","greyed out","below the fold","small, grey","pre-focused","pre-highlighted","tiny","hard to find","de-emphasi","hidden link"]},
+  {n:"Bait and Switch",d:"Advertising one outcome but delivering another on action.",
+   kw:["advertised","promised","turns out","instead you get","but actually","different from"]},
+  {n:"Drip Pricing",d:"Revealing parts of the price only late in the flow.",
+   kw:["full price appears only","fee shows up","price after","hidden charge","extra fee at","added at payment","convenience fee","appears on the payment"]},
+  {n:"Disguised Advertisement",d:"Ads styled to look like content, reviews, or navigation.",
+   kw:["sponsored","styled like","look like reviews","styled exactly like","ad disguised","native ad","looks like content"]},
+  {n:"Nagging",d:"Repeated prompts that disrupt the user's intended action.",
+   kw:["pop-up","reappears","every page","again and again","repeatedly","keeps asking","spin to win","nag"]},
+  {n:"Trick Question",d:"Confusing or double-negative wording that misleads choice.",
+   kw:["uncheck to opt out","do not untick","don't want to not","double negative","confusing wording"]},
+  {n:"SaaS Billing",d:"Recurring charges through opaque or hidden billing steps.",
+   kw:["auto-renew","recurring","free trial","card on file","will be charged","subscription renews","billed monthly"]},
+  {n:"Rogue Malware",d:"Misleading users into unwanted software or installs.",
+   kw:["install","download now","your device is at risk","fake virus","update required"]}
+];
+var GL={"False Urgency":"CCPA 2023, Annexure I (1)","Basket Sneaking":"CCPA 2023, Annexure I (2)","Confirm Shaming":"CCPA 2023, Annexure I (3)","Forced Action":"CCPA 2023, Annexure I (4)","Subscription Trap":"CCPA 2023, Annexure I (5) · DPDP S.6","Interface Interference":"CCPA 2023, Annexure I (6)","Bait and Switch":"CCPA 2023, Annexure I (7)","Drip Pricing":"CCPA 2023, Annexure I (8)","Disguised Advertisement":"CCPA 2023, Annexure I (9)","Nagging":"CCPA 2023, Annexure I (10)","Trick Question":"CCPA 2023, Annexure I (11)","SaaS Billing":"CCPA 2023, Annexure I (12)","Rogue Malware":"CCPA 2023, Annexure I (13)"};
+var SEVBY={"False Urgency":"high","Basket Sneaking":"critical","Confirm Shaming":"high","Forced Action":"critical","Subscription Trap":"critical","Interface Interference":"high","Bait and Switch":"high","Drip Pricing":"high","Disguised Advertisement":"medium","Nagging":"medium","Trick Question":"high","SaaS Billing":"high","Rogue Malware":"critical"};
+var FIX={
+  "False Urgency":"Remove fake scarcity/countdowns. Only show stock or time limits that are real and verifiable.",
+  "Basket Sneaking":"Never pre-tick add-ons, charges, or donations. Require an explicit opt-in for every extra item.",
+  "Confirm Shaming":"Use neutral decline wording (e.g. 'No thanks') instead of guilt-based copy.",
+  "Forced Action":"Let users access the core service without forced purchases or data-sharing; make extras optional.",
+  "Subscription Trap":"Make cancellation as easy and visible as signup — same number of steps, no forced surveys, and confirm it's cancelled (not 'paused').",
+  "Interface Interference":"Give the user's likely choice equal visual weight; don't hide or grey out the cheaper/decline option.",
+  "Bait and Switch":"Deliver exactly what was advertised; remove any switch between promise and outcome.",
+  "Drip Pricing":"Show the all-in price (including fees) upfront, before the user invests effort in the flow.",
+  "Disguised Advertisement":"Clearly label ads and sponsored items so they're distinct from genuine content or reviews.",
+  "Nagging":"Respect a user's dismissal; don't repeat the same prompt on every page or session.",
+  "Trick Question":"Use plain, single-meaning wording for choices; avoid double negatives and confusing toggles.",
+  "SaaS Billing":"Disclose recurring charges clearly before signup and send a reminder before each renewal.",
+  "Rogue Malware":"Never use deceptive prompts to push installs or updates; make any download clearly optional and explained."
+};
+
+var grid=document.getElementById('grid');
+for(var i=0;i<PATTERNS.length;i++){
+  var p=PATTERNS[i];
+  var d=document.createElement('div');d.className='pcard';
+  d.innerHTML='<div class="pn"><span class="num">'+String(i+1).padStart(2,'0')+'</span><span class="nm">'+p.n+'</span></div><div class="ds">'+p.d+'</div>';
+  grid.appendChild(d);
+}
+
+var SAMPLES={
+  travel:{label:"Airline checkout",type:"E-commerce checkout",text:"Airline booking — seat & add-ons (step 3 of 5):\n- Header banner: \"Hurry! Only 3 seats left at this price. Fare may rise in 04:58.\"\n- The \"Skip seat selection\" link is light grey, small, placed below the fold. The paid seat option (Rs 600) is pre-highlighted.\n- A \"Travel Assistance Bundle\" (Rs 499) checkbox is pre-ticked, bundled with SMS updates.\n- Trip insurance shows two buttons: \"Yes, protect my trip\" (large, blue) and \"No, I'll risk losing my money\" (small, grey).\n- The full price appears only after this step; a convenience fee (Rs 350) shows up on the payment page."},
+  ott:{label:"OTT cancellation",type:"Subscription cancellation",text:"Streaming service — cancel membership:\n- \"Cancel\" is not in Settings. The user must go: Account > Membership > Manage > Help > Other options > \"I want to leave.\"\n- On clicking cancel, a full-screen message says: \"Wait! You'll lose your watchlist, your downloads, and 40% loyalty pricing forever.\"\n- Two options: \"Keep my benefits\" (bright, pre-focused) and \"Continue to cancel anyway\" (greyed out).\n- A survey must be completed before cancellation finishes.\n- The final screen says \"We've paused your account\" (not cancelled) with a Reactivate button."},
+  shop:{label:"D2C signup",type:"Signup / onboarding",text:"Homeware site — create account:\n- Email field plus a checkbox that is pre-ticked: \"Yes, send me daily deals and share my details with partner brands.\"\n- \"Continue\" requires accepting the above; there is no way to sign up without it.\n- Cookie banner has a single \"Got it\" button and no reject option; trackers load as soon as the page opens.\n- A \"Spin to win 10% off\" pop-up reappears on every page visit when dismissed.\n- The reviews section includes sponsored product cards styled exactly like genuine user reviews."},
+  clean:{label:"Clean checkout \u2713",type:"E-commerce checkout",text:"Bookstore — checkout (step 2 of 3):\n- Order summary lists item price, GST, and delivery fee itemised upfront, with the total shown clearly.\n- No add-ons are pre-selected; gift-wrap is an opt-in unchecked box.\n- \"Place order\" and \"Continue shopping\" are equally weighted buttons.\n- Cookie banner has equal \"Accept\" and \"Reject\" buttons; non-essential trackers load only after consent.\n- Newsletter signup is a clearly optional, unchecked field."}
+};
+var tabs=document.getElementById('tabs');
+Object.keys(SAMPLES).forEach(function(k){
+  var b=document.createElement('button');b.className='tab';b.textContent=SAMPLES[k].label;
+  b.onclick=function(){
+    var all=document.querySelectorAll('.tab');for(var j=0;j<all.length;j++)all[j].classList.remove('active');
+    b.classList.add('active');
+    document.getElementById('flow').value=SAMPLES[k].text;
+    document.getElementById('ptype').value=SAMPLES[k].type;
+  };
+  tabs.appendChild(b);
+});
+
+var STEPS=["Reading the flow","Matching the 13 categories","Checking consent & withdrawal","Grading severity, writing fixes"];
+function showLoading(){
+  var out=document.getElementById('out');out.innerHTML='<div class="loading" id="ld"></div>';
+  var ld=document.getElementById('ld');
+  STEPS.forEach(function(s,i){
+    setTimeout(function(){
+      var p=ld.querySelector('.s');
+      if(p){var r=p.closest('.lrow');r.classList.add('done');p.outerHTML='<span class="c">\u2713</span>';}
+      var row=document.createElement('div');row.className='lrow';row.innerHTML='<span class="s"></span>'+s;ld.appendChild(row);
+    }, i*560);
+  });
+}
+
+// ---------- rule-based scanner (always works, no network) ----------
+function ruleScan(flow, surface){
+  var text=flow.toLowerCase();
+  var findings=[];
+  for(var i=0;i<PATTERNS.length;i++){
+    var p=PATTERNS[i];var hit=null;
+    for(var k=0;k<p.kw.length;k++){ if(text.indexOf(p.kw[k])>=0){hit=p.kw[k];break;} }
+    if(hit){
+      // pull a short snippet around the matched keyword from the ORIGINAL text
+      var idx=text.indexOf(hit);
+      var start=Math.max(0,idx-30), end=Math.min(flow.length,idx+hit.length+40);
+      var snippet=flow.substring(start,end).replace(/\s+/g,' ').trim();
+      if(start>0)snippet='…'+snippet; if(end<flow.length)snippet=snippet+'…';
+      findings.push({
+        pattern:p.n, severity:SEVBY[p.n]||'medium', guideline:GL[p.n]||'CCPA 2023',
+        element:snippet,
+        why:'This matches "'+p.n+'": '+p.d.charAt(0).toLowerCase()+p.d.slice(1),
+        fix:FIX[p.n]||'Adjust this element to remove the manipulative design.'
+      });
+    }
+  }
+  var order={critical:0,high:1,medium:2};
+  findings.sort(function(a,b){return (order[a.severity]||9)-(order[b.severity]||9);});
+  var penalty=0; findings.forEach(function(f){penalty+=(f.severity==='critical'?22:f.severity==='high'?14:8);});
+  var score=Math.max(8, 100-penalty);
+  var verdict, summary;
+  if(findings.length===0){score=Math.max(score,92);verdict="No patterns detected";summary="This flow looks clean against the 13 CCPA categories.";}
+  else if(findings.some(function(f){return f.severity==='critical';})){verdict="Material issues found";summary="This flow contains "+findings.length+" likely dark pattern(s), including critical ones that need fixing before launch.";}
+  else {verdict="Issues to address";summary="This flow contains "+findings.length+" likely dark pattern(s) to review before launch.";}
+  return {subject:surface, score:score, verdict:verdict, summary:summary, findings:findings, _engine:"rule-based"};
+}
+
+// ---------- try the AI; fall back to rules ----------
+function aiScan(flow, surface){
+  var list=PATTERNS.map(function(p,i){return (i+1)+". "+p.n+" — "+p.d;}).join("\n");
+  var prompt="You are a consumer-protection design reviewer in India. Review the UI FLOW below against the CCPA Guidelines for Prevention and Regulation of Dark Patterns, 2023 (13 patterns in Annexure I), reinforced by the June 2025 self-audit advisory. Use ONLY these 13 patterns:\n\n"+list+"\n\nAlso consider DPDP Act 2023 Section 6 where relevant (withdrawal must be as easy as giving consent; pre-ticked boxes are invalid).\n\nSurface type: "+surface+"\n\nReturn ONLY valid JSON, no markdown:\n{\"subject\":\"...\",\"score\":<0-100>,\"verdict\":\"3-5 words\",\"summary\":\"one sentence\",\"findings\":[{\"pattern\":\"EXACT name\",\"severity\":\"critical|high|medium\",\"guideline\":\"short cite\",\"element\":\"quote the offending text\",\"why\":\"1-2 sentences\",\"fix\":\"1-2 sentences\"}]}\nRules: only real issues; exact pattern names; critical first; if clean return findings:[] with high score.\n\nUI FLOW:\n\"\"\"\n"+flow+"\n\"\"\"";
+  return fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,messages:[{role:"user",content:prompt}]})
+  }).then(function(res){return res.json();}).then(function(data){
+    if(data && data.error){throw new Error(data.error.message||"api error");}
+    var t=(data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+    t=t.replace(/```json/gi,"").replace(/```/g,"").trim();
+    var a=t.indexOf("{"),b=t.lastIndexOf("}"); if(a>=0&&b>=0)t=t.slice(a,b+1);
+    var r=JSON.parse(t); r._engine="ai"; return r;
+  });
+}
+
+var run=document.getElementById('run');
+run.onclick=function(){
+  var flow=document.getElementById('flow').value.trim();
+  if(!flow){document.getElementById('out').innerHTML='<div class="card" style="padding:16px;color:var(--txt2)">Paste a flow or pick a sample first.</div>';return;}
+  var surface=document.getElementById('ptype').value;
+  run.disabled=true; showLoading();
+  var minDelay=new Promise(function(r){setTimeout(r,STEPS.length*560);});
+
+  aiScan(flow,surface).then(function(r){
+    minDelay.then(function(){render(r);});
+  }).catch(function(){
+    // network/AI unavailable → guaranteed rule-based result
+    var r=ruleScan(flow,surface);
+    minDelay.then(function(){render(r);});
+  });
+};
+
+var SEV={critical:0,high:1,medium:2};
+var SEVC={critical:'var(--crit)',high:'var(--high)',medium:'var(--med)'};
+var SEVBG={critical:'var(--crit-bg)',high:'var(--high-bg)',medium:'var(--med-bg)'};
+function render(r){
+  run.disabled=false;
+  var f=(r.findings||[]).slice().sort(function(a,b){return (SEV[a.severity]==null?9:SEV[a.severity])-(SEV[b.severity]==null?9:SEV[b.severity]);});
+  var c={critical:0,high:0,medium:0};
+  f.forEach(function(x){if(c[x.severity]!=null)c[x.severity]++;});
+  var score=Math.max(0,Math.min(100, r.score==null?0:r.score));
+  var col=score>=80?'var(--ok)':score>=55?'var(--med)':score>=35?'var(--high)':'var(--crit)';
+  var C=2*Math.PI*40, dash=C*(score/100);
+
+  var h='<div class="result">';
+  h+='<div class="verdict"><div class="gauge"><svg width="92" height="92"><circle cx="46" cy="46" r="40" stroke="var(--border2)" stroke-width="7" fill="none"/><circle cx="46" cy="46" r="40" stroke="'+col+'" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="'+dash+' '+C+'"/></svg><div class="gn"><b style="color:'+col+'">'+score+'</b><s>/ 100</s></div></div><div class="vt"><h2>'+esc(r.verdict||'Reviewed')+'</h2><p>'+esc(r.summary||'')+'</p></div></div>';
+
+  if(f.length){
+    h+='<div class="tally">';
+    [['critical','Critical'],['high','High'],['medium','Medium']].forEach(function(pair){
+      var k=pair[0],l=pair[1];
+      if(c[k])h+='<span class="tchip" style="background:'+SEVBG[k]+';color:'+SEVC[k]+'"><span class="d" style="background:'+SEVC[k]+'"></span>'+c[k]+' '+l+'</span>';
+    });
+    h+='</div><div class="cards">';
+    f.forEach(function(x,i){
+      h+='<div class="card" style="animation-delay:'+(i*70)+'ms"><div class="c-h"><span class="sev '+esc(x.severity)+'">'+esc(x.severity)+'</span><span class="pat">'+esc(x.pattern)+'</span><span class="gl">'+esc(x.guideline||'')+'</span></div><div class="c-b"><div class="quote"><span>spotted in the flow</span>'+esc(x.element||'')+'</div><div class="why">'+esc(x.why||'')+'</div><div class="fix"><b>how to fix</b><p>'+esc(x.fix||'')+'</p></div></div></div>';
+    });
+    h+='</div>';
+  } else {
+    h+='<div class="clean"><div class="ci"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#4ee08f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><h2>No dark patterns detected</h2><p>This flow looks clean against the 13 categories. A reviewer should still confirm edge cases.</p></div></div>';
+  }
+  h+='<div class="src-note">'+(r._engine==='ai'?'analysed live · 13 CCPA categories':'analysed with built-in rules · 13 CCPA categories')+'</div>';
+  h+='</div>';
+  document.getElementById('out').innerHTML=h;
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+document.querySelector('.tab').click();
+</script>
+</body>
+</html>
