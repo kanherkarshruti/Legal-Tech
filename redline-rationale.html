@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redline Rationale — what changed, why it matters, who it favours</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root{
+    --bg:#fcfcfa;
+    --surface:#ffffff;
+    --raised:#f6f6f3;
+    --line:#e8e7e1;
+    --line2:#d8d7cf;
+    --ink:#1a1a17;
+    --ink2:#55544d;
+    --ink3:#8f8e84;
+    --accent:#2c3e8c;
+    --accent2:#1f2d66;
+    --accent-soft:#eef0f9;
+    --drafter:#b5641c;
+    --drafter-soft:#f7ede1;
+    --receiver:#1f6f8c;
+    --receiver-soft:#e4eff2;
+    --neutral:#7a796f;
+    --neutral-soft:#f0efea;
+    --risk:#b23b32;
+    --risk-soft:#f8e7e4;
+    --add:#2f7a52;
+    --add-soft:#e6f1ea;
+    --del:#b23b32;
+    --serif:'Newsreader',Georgia,serif;--sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--accent);color:#fff}
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none}
+  .mark svg{width:16px;height:16px}
+  .brand .nm{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:-.2px}
+  .nav-tag{font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:.3px}
+  @media(max-width:600px){.nav-tag{display:none}}
+
+  .hero{padding:44px 0 30px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  .hero h1{font-family:var(--serif);font-weight:600;font-size:clamp(29px,4.6vw,42px);line-height:1.12;letter-spacing:-.7px;max-width:640px}
+  .hero h1 em{font-style:italic;color:var(--accent)}
+  .hero p{color:var(--ink2);margin-top:15px;font-size:16px;max-width:600px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+  .tab{font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);border-radius:7px;padding:7px 12px;transition:.13s;font-family:var(--sans)}
+  .tab:hover{border-color:var(--accent);color:var(--accent)}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+  .tab.others{border-style:dashed}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:740px){.twocol{grid-template-columns:1fr}}
+  .vbox label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:7px;letter-spacing:.2px}
+  .vbox label .tg{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500}
+  .tg.orig{background:var(--neutral-soft);color:var(--ink2)}
+  .tg.rev{background:var(--accent-soft);color:var(--accent)}
+  textarea{width:100%;min-height:185px;resize:vertical;background:var(--bg);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--mono);font-size:12.5px;line-height:1.6;padding:13px;outline:none;transition:.13s}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea::placeholder{color:var(--ink3)}
+
+  .controls{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  select{font-size:14px;background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:11px 13px;color:var(--ink);outline:none;font-family:var(--sans);cursor:pointer;flex:1;min-width:160px}
+  select:focus{border-color:var(--accent)}
+  .go{font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:12px 22px;display:inline-flex;align-items:center;gap:9px;transition:.13s}
+  .go:hover{background:var(--accent2)}
+  .go:disabled{opacity:.5;cursor:not-allowed}
+  .go svg{width:16px;height:16px}
+
+  #out{margin-top:16px}
+  .loading{padding:6px 0}
+  .lrow{display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--ink2);padding:6px 0;opacity:0;animation:fade .3s forwards}
+  .lrow .s{width:13px;height:13px;border:2px solid var(--line2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+  .lrow.done{color:var(--add)}
+  .lrow .c{color:var(--add);width:13px;text-align:center;font-weight:600}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fade{to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .result{animation:rise .35s}
+  .headline{display:flex;gap:14px;align-items:flex-start;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .headline .ic{width:38px;height:38px;border-radius:9px;flex:none;display:grid;place-items:center}
+  .headline h2{font-family:var(--serif);font-size:19px;font-weight:600;line-height:1.3}
+  .favchip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;font-weight:500;padding:5px 11px;border-radius:6px;margin-top:9px}
+  .favchip .d{width:7px;height:7px;border-radius:50%}
+
+  .changes{display:flex;flex-direction:column;gap:14px}
+  .ch{border:1px solid var(--line);border-radius:11px;overflow:hidden;animation:rise .35s backwards}
+  .ch-h{display:flex;align-items:center;gap:11px;padding:12px 15px;background:var(--raised);border-bottom:1px solid var(--line)}
+  .ch-h .kind{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:4px;flex:none}
+  .kind.added{background:var(--add-soft);color:var(--add)}
+  .kind.removed{background:var(--risk-soft);color:var(--risk)}
+  .kind.modified{background:var(--accent-soft);color:var(--accent)}
+  .ch-h .t{font-family:var(--serif);font-size:16px;font-weight:600;flex:1;letter-spacing:-.1px}
+  .ch-b{padding:15px}
+  .diff{font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:13px}
+  .diff .o{color:var(--del);text-decoration:line-through;text-decoration-color:rgba(178,59,50,.45)}
+  .diff .n{color:var(--add)}
+  .diff .lbl{display:inline-block;width:38px;font-family:var(--sans);font-size:9.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);vertical-align:top}
+  .diff .row{margin-bottom:7px}
+  .diff .row:last-child{margin-bottom:0}
+  .diff .txt{display:inline-block;width:calc(100% - 44px)}
+  .rationale{margin-bottom:14px}
+  .rationale .h{font-family:var(--mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);margin-bottom:5px;font-weight:500}
+  .rationale p{font-size:14.5px;color:var(--ink);line-height:1.55}
+  .meta{display:flex;gap:10px;flex-wrap:wrap}
+  .mbox{flex:1;min-width:148px;border-radius:8px;padding:10px 12px;border:1px solid var(--line);background:var(--raised)}
+  .mbox .ml{font-family:var(--mono);font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+  .mbox .mv{font-size:13.5px;font-weight:500}
+  .mbox.risk{background:var(--risk-soft);border-color:rgba(178,59,50,.2)}
+  .mbox.risk .mv{color:var(--risk)}
+  .favtag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+  .favtag .d{width:8px;height:8px;border-radius:50%}
+
+  .src-note{font-family:var(--mono);font-size:10.5px;color:var(--ink3);margin-top:14px;letter-spacing:.3px}
+  .hint{padding:14px;color:var(--ink2);font-size:14px;background:var(--raised);border:1px solid var(--line);border-radius:10px}
+
+  .ref{padding:48px 0 16px}
+  .ref h3{font-family:var(--serif);font-size:20px;font-weight:600;margin-bottom:8px}
+  .ref p{color:var(--ink2);font-size:15px;line-height:1.65;max-width:640px}
+  .legend{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}
+  .lg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:var(--surface)}
+  .lg .d{width:9px;height:9px;border-radius:50%}
+
+  footer{border-top:1px solid var(--line);margin-top:48px}
+  .foot{padding:24px 0 50px}
+  .foot p{font-size:12.5px;color:var(--ink3);max-width:640px;line-height:1.6}
+  .foot p b{color:var(--ink2);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14M5 4v16M5 20h14" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M9 9h7M9 13h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <span class="nm">Redline Rationale</span>
+    </div>
+    <span class="nav-tag">what changed · why it matters · who it favours</span>
+  </nav>
+
+  <section class="hero">
+    <div class="eyebrow">Contract change explainer</div>
+    <h1>See <em>what changed</em> in a redline — and understand <em>who it favours.</em></h1>
+    <p>Paste the original clause and the revised version. It reads the change the way a lawyer would: what moved, why it matters, which side it benefits, and whether it introduces risk. The diff is the easy part; the rationale is the point.</p>
+  </section>
+
+  <div class="card">
+    <div class="tabs" id="tabs"></div>
+    <div class="twocol">
+      <div class="vbox">
+        <label><span class="tg orig">v1</span> Original clause</label>
+        <textarea id="orig" placeholder="Paste the original version of the clause."></textarea>
+      </div>
+      <div class="vbox">
+        <label><span class="tg rev">v2</span> Revised clause</label>
+        <textarea id="rev" placeholder="Paste the revised / redlined version."></textarea>
+      </div>
+    </div>
+    <div class="controls">
+      <select id="ctype">
+        <option>Commercial / SaaS agreement</option>
+        <option>Lease / rental agreement</option>
+        <option>Employment agreement</option>
+        <option>NDA / confidentiality</option>
+        <option>Services / SOW</option>
+        <option>Loan / financing</option>
+        <option>Other / general</option>
+      </select>
+      <button class="go" id="run">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Explain the change
+      </button>
+    </div>
+    <div id="out"></div>
+  </div>
+
+  <section class="ref">
+    <h3>Why rationale, not just diff</h3>
+    <p>Most redline tools detect and classify edits — useful, but they stop at "this sentence changed." The judgment a lawyer adds is the part that matters: a 30-day cure period cut to 5 days isn't just a number change, it's a shift of leverage toward whoever can now terminate faster. This tool surfaces that — what each change does to each side's position — with every reading flagged for a human to confirm. It isn't limited to the examples above; paste any clause from any agreement.</p>
+    <div class="legend">
+      <span class="lg"><span class="d" style="background:var(--receiver)"></span>Favours receiving / weaker party</span>
+      <span class="lg"><span class="d" style="background:var(--drafter)"></span>Favours drafting / stronger party</span>
+      <span class="lg"><span class="d" style="background:var(--neutral)"></span>Neutral / clarifying</span>
+      <span class="lg"><span class="d" style="background:var(--risk)"></span>Introduces risk</span>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap foot">
+    <p><b>Decision-support, not legal advice.</b> Redline Rationale offers a plain-language reading of contract changes to speed up review. Every reading should be confirmed by a qualified lawyer before it's relied on.</p>
+  </div>
+</footer>
+
+<script>
+var SAMPLES={
+  cure:{label:"Cure period cut",ctype:"Commercial / SaaS agreement",
+    orig:"If either party breaches any material term of this Agreement, the non-breaching party shall provide written notice, and the breaching party shall have thirty (30) days from receipt of such notice to cure the breach before the non-breaching party may terminate this Agreement.",
+    rev:"If either party breaches any term of this Agreement, the non-breaching party may terminate this Agreement immediately upon written notice, provided that for non-material breaches the breaching party shall have five (5) days to cure."},
+  indem:{label:"Indemnity widened",ctype:"Services / SOW",
+    orig:"The Service Provider shall indemnify the Client against direct losses arising solely from the Service Provider's gross negligence or wilful misconduct in performing the Services.",
+    rev:"The Service Provider shall indemnify, defend and hold harmless the Client and its affiliates, officers and agents against any and all losses, damages, claims and expenses (including legal fees) arising out of or in connection with the Services, howsoever caused."},
+  liab:{label:"Liability cap removed",ctype:"Commercial / SaaS agreement",
+    orig:"In no event shall either party's aggregate liability under this Agreement exceed the total fees paid in the twelve (12) months preceding the claim. Neither party shall be liable for indirect or consequential losses.",
+    rev:"The Service Provider's aggregate liability under this Agreement shall not be limited. The Service Provider shall be liable for all direct, indirect, consequential and special losses arising from its performance."},
+  rent:{label:"Rent escalation added",ctype:"Lease / rental agreement",
+    orig:"The monthly rent shall be Rs. 50,000, payable in advance on the first day of each month during the term of this Lease.",
+    rev:"The monthly rent shall be Rs. 50,000 for the first year, and shall increase by ten percent (10%) annually on each anniversary of the commencement date. The Lessor may revise this rate upon thirty days' notice if market conditions warrant."},
+  others:{label:"Paste your own",ctype:"Other / general",orig:"",rev:"",_blank:true}
+};
+var tabs=document.getElementById('tabs');
+Object.keys(SAMPLES).forEach(function(k){
+  var b=document.createElement('button');
+  b.className='tab'+(SAMPLES[k]._blank?' others':'');
+  b.textContent=SAMPLES[k].label;
+  b.onclick=function(){
+    var all=document.querySelectorAll('.tab');for(var j=0;j<all.length;j++)all[j].classList.remove('active');
+    b.classList.add('active');
+    document.getElementById('orig').value=SAMPLES[k].orig;
+    document.getElementById('rev').value=SAMPLES[k].rev;
+    document.getElementById('ctype').value=SAMPLES[k].ctype;
+    if(SAMPLES[k]._blank){
+      document.getElementById('out').innerHTML='<div class="hint">Paste any two versions of a clause — from any contract, not just the examples. Pick the closest contract type on the left, then press <b>Explain the change</b>.</div>';
+      document.getElementById('orig').focus();
+    } else {
+      document.getElementById('out').innerHTML='';
+    }
+  };
+  tabs.appendChild(b);
+});
+
+var STEPS=["Aligning the two versions","Isolating each substantive change","Reading the legal effect","Assessing which side it favours"];
+function showLoading(){
+  var out=document.getElementById('out');out.innerHTML='<div class="loading" id="ld"></div>';
+  var ld=document.getElementById('ld');
+  STEPS.forEach(function(s,i){
+    setTimeout(function(){
+      var p=ld.querySelector('.s');
+      if(p){var r=p.closest('.lrow');r.classList.add('done');p.outerHTML='<span class="c">\u2713</span>';}
+      var row=document.createElement('div');row.className='lrow';row.innerHTML='<span class="s"></span>'+s;ld.appendChild(row);
+    }, i*560);
+  });
+}
+
+var RULES=[
+  {test:function(o,r){return /thirty|30/.test(o)&&/(five|5|immediat)/.test(r)&&/cure|terminat/i.test(o+r);},
+   kind:"modified",title:"Cure period shortened",
+   why:"The time the breaching party gets to fix a breach before termination has been cut sharply (and termination may now be immediate). Less time to cure means the other side can walk away faster.",
+   favours:"drafting party",effect:"Shifts termination leverage to the non-breaching party.",risk:"A very short or zero cure period can make the contract fragile and disputes more likely."},
+  {test:function(o,r){return /indemnif/i.test(o+r)&&(/hold harmless|defend|affiliates|any and all|howsoever/i.test(r));},
+   kind:"modified",title:"Indemnity broadened",
+   why:"The indemnity has expanded — more covered parties, more types of loss, and a lower bar to trigger it (from 'gross negligence only' to 'howsoever caused'). The indemnifying side now carries far more exposure.",
+   favours:"receiving party",effect:"Transfers substantially more risk onto the indemnifying party.",risk:"An uncapped, all-cause indemnity may be commercially unacceptable and hard to insure."},
+  {test:function(o,r){return /(not be limited|shall not be limited|unlimited)/i.test(r)&&/liability/i.test(o+r);},
+   kind:"removed",title:"Liability cap removed",
+   why:"A cap that previously limited liability (often to fees paid) has been removed, and consequential losses — usually excluded — are now included. This is one of the most significant risk shifts in any contract.",
+   favours:"receiving party",effect:"Exposes the performing party to unlimited and indirect losses.",risk:"High. Uncapped liability including consequential loss is a major red flag for the exposed party."},
+  {test:function(o,r){return /(increase|escalat|revise).*(percent|%|annually)/i.test(r)||/(\d+%).*(annual|year)/i.test(r);},
+   kind:"added",title:"Rent / price escalation introduced",
+   why:"A fixed amount has become an escalating one, with annual increases and a discretionary revision right. The paying party now faces rising, partly open-ended costs.",
+   favours:"drafting party",effect:"Improves the receiving party's economics over time at the payer's expense.",risk:"A discretionary 'market conditions' revision is vague and may be contested as unenforceable."}
+];
+function ruleScan(orig,rev,ctype){
+  var changes=[];
+  RULES.forEach(function(R){ if(R.test(orig||'',rev||'')){
+    changes.push({kind:R.kind,title:R.title,old:firstSentence(orig),new:firstSentence(rev),rationale:R.why,favours:R.favours,effect:R.effect,risk:R.risk});
+  }});
+  if(changes.length===0){
+    changes.push({kind:"modified",title:"Clause revised",
+      old:firstSentence(orig),new:firstSentence(rev),
+      rationale:"The wording has changed between the two versions. Review whether the revision narrows or widens any obligation, right, time limit, or liability — and which party that helps.",
+      favours:"unclear",effect:"Effect depends on the specific wording; confirm against the parties' intent.",risk:"Confirm with a lawyer whether the change alters allocation of risk."});
+  }
+  return {summary:summarise(changes,ctype),favours:tallyFav(changes),changes:changes,_engine:"rule-based"};
+}
+function firstSentence(t){ if(!t)return ''; t=t.trim(); var m=t.split(/(?<=\.)\s/)[0]; return m.length>200?m.slice(0,200)+'…':m; }
+function tallyFav(ch){var d=0,r=0;ch.forEach(function(c){if(c.favours==='drafting party')d++;else if(c.favours==='receiving party')r++;});
+  if(d>r)return"drafting party";if(r>d)return"receiving party";return"mixed";}
+function summarise(ch,ctype){var risky=ch.filter(function(c){return c.risk&&/high/i.test(c.risk);});
+  if(risky.length)return"This redline shifts meaningful risk between the parties, including at least one high-risk change. Review before accepting.";
+  return"This redline makes "+ch.length+" substantive change(s) that move the balance between the parties. Each is explained below.";}
+
+function aiScan(orig,rev,ctype){
+  var prompt="You are a senior contracts lawyer reviewing a redline. Compare the ORIGINAL clause and the REVISED clause. Explain each substantive change in plain language a junior associate can act on. Contract type: "+ctype+".\n\nReturn ONLY valid JSON, no markdown:\n{\"summary\":\"one-sentence overall read of the redline\",\"favours\":\"drafting party | receiving party | mixed | neutral\",\"changes\":[{\"kind\":\"added|removed|modified\",\"title\":\"short title of the change\",\"old\":\"the relevant original wording (short quote)\",\"new\":\"the relevant revised wording (short quote)\",\"rationale\":\"why this change matters, legally, in 1-3 sentences\",\"favours\":\"drafting party | receiving party | neutral\",\"effect\":\"one line on what it does to the parties' positions\",\"risk\":\"one line; if it introduces notable risk say so, else 'Low'\"}]}\nRules: focus on substance (obligations, rights, time limits, liability, money, termination), not cosmetic edits. Be concrete about WHO each change favours and WHY. If nothing substantive changed, say so.\n\nORIGINAL:\n\"\"\"\n"+orig+"\n\"\"\"\n\nREVISED:\n\"\"\"\n"+rev+"\n\"\"\"";
+  return fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,messages:[{role:"user",content:prompt}]})
+  }).then(function(res){return res.json();}).then(function(data){
+    if(data&&data.error){throw new Error(data.error.message||"api error");}
+    var t=(data.content||[]).filter(function(b){return b.type==="text";}).map(function(b){return b.text;}).join("");
+    t=t.replace(/```json/gi,"").replace(/```/g,"").trim();
+    var a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>=0)t=t.slice(a,b+1);
+    var r=JSON.parse(t);r._engine="ai";return r;
+  });
+}
+
+var run=document.getElementById('run');
+run.onclick=function(){
+  var orig=document.getElementById('orig').value.trim();
+  var rev=document.getElementById('rev').value.trim();
+  if(!orig||!rev){document.getElementById('out').innerHTML='<div class="hint">Paste both the original and the revised clause (or pick a sample on the left).</div>';return;}
+  var ctype=document.getElementById('ctype').value;
+  run.disabled=true;showLoading();
+  var minDelay=new Promise(function(r){setTimeout(r,STEPS.length*560);});
+  aiScan(orig,rev,ctype).then(function(r){minDelay.then(function(){render(r);});})
+    .catch(function(){var r=ruleScan(orig,rev,ctype);minDelay.then(function(){render(r);});});
+};
+
+var FAVC={"drafting party":"var(--drafter)","receiving party":"var(--receiver)","neutral":"var(--neutral)","mixed":"var(--accent)","unclear":"var(--neutral)"};
+var FAVBG={"drafting party":"var(--drafter-soft)","receiving party":"var(--receiver-soft)","neutral":"var(--neutral-soft)","mixed":"var(--accent-soft)","unclear":"var(--neutral-soft)"};
+var FAVLABEL={"drafting party":"Favours the drafting / stronger party","receiving party":"Favours the receiving / weaker party","neutral":"Neutral / clarifying","mixed":"Mixed — favours both in parts","unclear":"Effect unclear — confirm"};
+
+function render(r){
+  run.disabled=false;
+  var ch=r.changes||[];
+  var fav=r.favours||'mixed';
+  var favKey=FAVC[fav]?fav:'mixed';
+  var h='<div class="result">';
+  h+='<div class="headline"><div class="ic" style="background:'+FAVBG[favKey]+'"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18M6 7v11a1 1 0 001 1h10a1 1 0 001-1V7M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2" stroke="'+FAVC[favKey]+'" stroke-width="1.6" stroke-linecap="round"/></svg></div>';
+  h+='<div><h2>'+esc(r.summary||'Redline reviewed')+'</h2>';
+  h+='<div class="favchip" style="background:'+FAVBG[favKey]+';color:'+FAVC[favKey]+'"><span class="d" style="background:'+FAVC[favKey]+'"></span>Overall: '+esc(FAVLABEL[favKey]||fav)+'</div></div></div>';
+  h+='<div class="changes">';
+  ch.forEach(function(c,i){
+    var ck=(c.kind||'modified').toLowerCase();
+    var cf=FAVC[c.favours]?c.favours:'neutral';
+    h+='<div class="ch" style="animation-delay:'+(i*70)+'ms">';
+    h+='<div class="ch-h"><span class="kind '+esc(ck)+'">'+esc(ck)+'</span><span class="t">'+esc(c.title||'Change')+'</span></div>';
+    h+='<div class="ch-b">';
+    if(c.old||c.new){
+      h+='<div class="diff">';
+      if(c.old)h+='<div class="row"><span class="lbl">was</span><span class="txt o">'+esc(c.old)+'</span></div>';
+      if(c.new)h+='<div class="row"><span class="lbl">now</span><span class="txt n">'+esc(c.new)+'</span></div>';
+      h+='</div>';
+    }
+    h+='<div class="rationale"><div class="h">why it matters</div><p>'+esc(c.rationale||'')+'</p></div>';
+    h+='<div class="meta">';
+    h+='<div class="mbox"><div class="ml">who it favours</div><div class="mv"><span class="favtag"><span class="d" style="background:'+FAVC[cf]+'"></span>'+esc(favShort(c.favours))+'</span></div></div>';
+    if(c.effect)h+='<div class="mbox"><div class="ml">effect</div><div class="mv">'+esc(c.effect)+'</div></div>';
+    if(c.risk&&!/^low$/i.test(c.risk))h+='<div class="mbox risk"><div class="ml">risk flag</div><div class="mv">'+esc(c.risk)+'</div></div>';
+    h+='</div></div></div>';
+  });
+  h+='</div>';
+  h+='<div class="src-note">'+(r._engine==='ai'?'analysed live · confirm each reading with a lawyer':'analysed with built-in rules · confirm each reading with a lawyer')+'</div>';
+  h+='</div>';
+  document.getElementById('out').innerHTML=h;
+}
+function favShort(f){if(f==='drafting party')return'Drafting / stronger party';if(f==='receiving party')return'Receiving / weaker party';if(f==='neutral')return'Neutral';return'Confirm';}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+document.querySelector('.tab').click();
+</script>
+</body>
+</html>
