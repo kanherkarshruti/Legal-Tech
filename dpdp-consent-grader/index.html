@@ -920,6 +920,7 @@ document.getElementById('clear').addEventListener('click', () => {
   input.value = ''; charcount.textContent = '0 chars';
   output.innerHTML = `<div class="empty"><span class="big">Cleared.</span>Paste another notice to grade it.</div>`;
   runStamp.textContent = '';
+  resetImageUI('single');
 });
 
 // --- Sample notices (illustrative, written for the demo) ---
@@ -1018,6 +1019,7 @@ document.getElementById('b-add').addEventListener('click', () => {
 
 document.getElementById('b-clear-input').addEventListener('click', () => {
   bInput.value = ''; bLabel.value = ''; bChar.textContent = '0 chars';
+  resetImageUI('batch');
 });
 
 function gradeColor(pct) {
@@ -1293,6 +1295,26 @@ function wireDropZone(target) {
   }
 }
 const imageHandlers = {};
+
+// Fully reset the screenshot UI for a target (drop zone, preview, status, note, file input)
+const DROP_INNER_HTML = {
+  single: '<strong>Paste a screenshot, drop one here, or click to choose</strong><span>Press Ctrl+V / Cmd+V to paste a copied image. The text is read from the image in your browser — nothing is uploaded. Then check and fix it before grading.</span>',
+  batch: '<strong>Paste a screenshot, drop one here, or click to choose</strong><span>Ctrl+V / Cmd+V pastes a copied image. Text is read in your browser — nothing is uploaded. Check it before adding to the batch.</span>'
+};
+function resetImageUI(target) {
+  const drop = document.getElementById('drop-' + target);
+  const status = document.getElementById('ocr-' + target);
+  const note = document.getElementById('ocrnote-' + target);
+  const fileInput = document.getElementById('file-' + target);
+  if (drop) {
+    const inner = drop.querySelector('.drop-inner');
+    if (inner) inner.innerHTML = DROP_INNER_HTML[target];
+  }
+  if (status) { status.style.display = 'none'; status.classList.remove('done'); status.innerHTML = ''; }
+  if (note) note.classList.remove('show');
+  if (fileInput) fileInput.value = ''; // so re-selecting the same file fires 'change' again
+}
+
 wireDropZone('single');
 wireDropZone('batch');
 
