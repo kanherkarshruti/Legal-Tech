@@ -526,8 +526,8 @@
       <div class="drop-zone" id="drop-single" style="display:none">
         <input type="file" id="file-single" accept="image/*" hidden />
         <div class="drop-inner">
-          <strong>Drop a screenshot here, or click to choose</strong>
-          <span>The text is read from the image in your browser — nothing is uploaded. Then check and fix it before grading.</span>
+          <strong>Paste a screenshot, drop one here, or click to choose</strong>
+          <span>Press Ctrl+V / Cmd+V to paste a copied image. The text is read from the image in your browser — nothing is uploaded. Then check and fix it before grading.</span>
         </div>
         <div class="ocr-status" id="ocr-single" style="display:none"></div>
       </div>
@@ -573,8 +573,8 @@ Tip: paste the full consent / privacy section, not just the heading. The grader 
         <div class="drop-zone" id="drop-batch" style="display:none">
           <input type="file" id="file-batch" accept="image/*" hidden />
           <div class="drop-inner">
-            <strong>Drop a screenshot here, or click to choose</strong>
-            <span>Text is read in your browser — nothing is uploaded. Check it before adding to the batch.</span>
+            <strong>Paste a screenshot, drop one here, or click to choose</strong>
+            <span>Ctrl+V / Cmd+V pastes a copied image. Text is read in your browser — nothing is uploaded. Check it before adding to the batch.</span>
           </div>
           <div class="ocr-status" id="ocr-batch" style="display:none"></div>
         </div>
@@ -1219,12 +1219,15 @@ function wireDropZone(target) {
   });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
 
+  // expose so the page-level paste listener can route to the active target
+  imageHandlers[target] = handleImage;
+
   async function handleImage(file) {
     if (!file.type.startsWith('image/')) { toast('That is not an image file'); return; }
     if (typeof Tesseract === 'undefined') {
       status.style.display = 'block';
       status.classList.remove('done');
-      status.innerHTML = 'OCR library could not load. Check your connection, or switch to “Paste text” and paste the notice directly.';
+      status.innerHTML = 'The OCR engine didn’t load (it comes from a CDN). Check your connection or any script-blocker, then reload — or switch to “Paste text”.';
       return;
     }
     // preview
@@ -1238,20 +1241,33 @@ function wireDropZone(target) {
 
     status.style.display = 'block';
     status.classList.remove('done');
-    status.innerHTML = `Reading text…<div class="ocr-bar"><i id="bar-${target}"></i></div>`;
+    status.innerHTML = `Loading OCR engine… (first run downloads ~2&nbsp;MB)<div class="ocr-bar"><i id="bar-${target}"></i></div>`;
     const bar = document.getElementById('bar-' + target);
 
-    try {
-      const worker = await Tesseract.createWorker('eng', 1, {
-        logger: m => {
-          if (m.status === 'recognizing text' && bar) bar.style.width = Math.round(m.progress * 100) + '%';
-        }
-      });
-      const { data: { text } } = await worker.recognize(file);
-      await worker.terminate();
+    let worker;
+    // Guard: if the engine stalls (CDN blocked / wasm fails), don't hang forever.
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 45000)
+    );
 
-      const cleaned = text.replace(/\n{3,}/g, '\n\n').trim();
-      // switch back to text view so the user can edit
+    try {
+      const run = (async () => {
+        worker = await Tesseract.createWorker('eng', 1, {
+          logger: m => {
+            if (m.status === 'recognizing text' && bar) {
+              bar.style.width = Math.round(m.progress * 100) + '%';
+              status.firstChild && (status.childNodes[0].nodeValue = 'Reading text… ');
+            }
+          },
+          errorHandler: e => console.error('Tesseract worker error:', e)
+        });
+        const { data: { text } } = await worker.recognize(file);
+        return text;
+      })();
+
+      const text = await Promise.race([run, timeout]);
+
+      const cleaned = (text || '').replace(/\n{3,}/g, '\n\n').trim();
       document.querySelector(`.imode[data-target="${target}"][data-mode="text"]`).click();
       ta.value = cleaned;
       counter.textContent = cleaned.length.toLocaleString() + ' chars';
@@ -1259,18 +1275,60 @@ function wireDropZone(target) {
       status.classList.add('done');
       status.innerHTML = '✓ Text extracted — now check and fix it above.';
       if (cleaned.length < 40) {
-        status.innerHTML = '✓ Read, but very little text found. Try a clearer or larger screenshot, or paste the text directly.';
+        status.classList.remove('done');
+        status.innerHTML = 'Read the image, but found very little text. Try a clearer or larger screenshot — or paste the text directly.';
       }
       toast('Text extracted from image');
     } catch (err) {
       status.classList.remove('done');
-      status.innerHTML = 'Could not read this image. Try a clearer screenshot, or switch to “Paste text”.';
+      if (err && err.message === 'timeout') {
+        status.innerHTML = 'The OCR engine timed out loading from the CDN (often a network or script-blocker issue). Reload and retry, or use “Paste text”.';
+      } else {
+        status.innerHTML = 'Could not read this image: ' + (err && err.message ? err.message : 'unknown error') + '. Try a clearer screenshot or “Paste text”.';
+      }
       console.error('OCR error:', err);
+    } finally {
+      if (worker) { try { await worker.terminate(); } catch (e) {} }
     }
   }
 }
+const imageHandlers = {};
 wireDropZone('single');
 wireDropZone('batch');
+
+// ---- Paste an image anywhere (Ctrl/Cmd+V) → route to the active image mode ----
+function activeImageTarget() {
+  // which target currently has image mode showing?
+  const sImg = document.getElementById('drop-single').style.display !== 'none';
+  const bImg = document.getElementById('drop-batch').style.display !== 'none';
+  // prefer whichever view is visible
+  const batchVisible = document.getElementById('view-batch').style.display !== 'none';
+  if (batchVisible && bImg) return 'batch';
+  if (!batchVisible && sImg) return 'single';
+  if (sImg) return 'single';
+  if (bImg) return 'batch';
+  return null;
+}
+
+document.addEventListener('paste', e => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  let imageFile = null;
+  for (const it of items) {
+    if (it.type && it.type.startsWith('image/')) { imageFile = it.getAsFile(); break; }
+  }
+  if (!imageFile) return; // not an image paste — let normal text paste happen
+
+  let target = activeImageTarget();
+  if (!target) {
+    // user pasted an image but isn't in screenshot mode — switch them into it
+    const batchVisible = document.getElementById('view-batch').style.display !== 'none';
+    target = batchVisible ? 'batch' : 'single';
+    const btn = document.querySelector(`.imode[data-target="${target}"][data-mode="image"]`);
+    if (btn) btn.click();
+  }
+  e.preventDefault();
+  if (imageHandlers[target]) imageHandlers[target](imageFile);
+});
 
 // hide the OCR note again when the user edits the text manually after a while
 ['input', 'b-input'].forEach(id => {
