@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consent Notice Grader — DPDP Act 2023</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1a17;
+    --paper: #f6f4ee;
+    --paper-edge: #eae5d9;
+    --rule: #d8d2c4;
+    --seal: #7c2d2d;        /* statute red */
+    --seal-soft: #a85454;
+    --pass: #2f5f4a;        /* verdict green */
+    --pass-soft: #e3ede7;
+    --fail: #8a2f2f;        /* verdict red */
+    --fail-soft: #f2e2e0;
+    --warn: #8a6d2f;        /* verdict amber */
+    --warn-soft: #f1e9d6;
+    --muted: #6b6457;
+    --ink-soft: #43403a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', Menlo, monospace;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- Masthead ---------- */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 34px 0 22px;
+  }
+  .eyebrow {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--seal);
+    margin-bottom: 14px;
+  }
+  h1.title {
+    font-size: clamp(2.2rem, 5.2vw, 3.6rem);
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    max-width: 16ch;
+  }
+  .standfirst {
+    margin-top: 16px;
+    font-size: clamp(1rem, 1.5vw, 1.18rem);
+    color: var(--ink-soft);
+    max-width: 60ch;
+  }
+  .byline {
+    margin-top: 18px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .byline a { color: var(--seal); text-decoration: none; border-bottom: 1px solid var(--seal-soft); }
+  .byline a:hover { color: var(--seal-soft); }
+
+  /* ---------- Workbench ---------- */
+  .bench {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 2px solid var(--ink);
+    border-top: none;
+    min-height: 540px;
+  }
+  @media (max-width: 860px) {
+    .bench { grid-template-columns: 1fr; }
+  }
+
+  .panel { padding: 26px 28px 30px; }
+  .panel.left {
+    border-right: 2px solid var(--ink);
+    background:
+      repeating-linear-gradient(var(--paper) 0 27px, var(--paper-edge) 27px 28px);
+  }
+  @media (max-width: 860px) {
+    .panel.left { border-right: none; border-bottom: 2px solid var(--ink); }
+  }
+
+  .panel-label {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .panel-label .n { color: var(--seal); }
+
+  textarea {
+    width: 100%;
+    min-height: 360px;
+    border: none;
+    background: transparent;
+    resize: vertical;
+    font-family: 'Iowan Old Style', Palatino, Georgia, serif;
+    font-size: 15px;
+    line-height: 28px;
+    color: var(--ink);
+    outline: none;
+  }
+  textarea::placeholder { color: #b3ac9c; }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  button.run {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 13px 22px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.run:hover { background: var(--seal); }
+  button.ghost {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+  .samples {
+    margin-top: 16px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .samples span { color: var(--muted); }
+  .samples a {
+    color: var(--seal);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--seal-soft);
+    cursor: pointer;
+    margin-right: 12px;
+  }
+  .samples a:hover { color: var(--seal-soft); }
+
+  /* ---------- Verdict panel ---------- */
+  .panel.right { background: var(--paper); }
+
+  .empty {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.7;
+    margin-top: 8px;
+  }
+  .empty .big {
+    font-size: 19px;
+    color: var(--ink-soft);
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  /* Scorecard */
+  .score-head {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 16px;
+    margin-bottom: 4px;
+  }
+  .grade {
+    font-size: 58px;
+    font-weight: 600;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+  }
+  .grade small {
+    display: block;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 8px;
+  }
+  .score-meta { font-size: 14px; color: var(--ink-soft); padding-bottom: 6px; }
+  .score-meta strong { font-weight: 600; }
+
+  .checks { margin-top: 8px; }
+  .check {
+    border-bottom: 1px solid var(--rule);
+    padding: 15px 0;
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+  .mark {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .mark.pass { color: var(--pass); }
+  .mark.fail { color: var(--fail); }
+  .mark.warn { color: var(--warn); }
+
+  .check-body h3 {
+    font-size: 15.5px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .check-body p {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .cite {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--seal);
+    white-space: nowrap;
+    text-transform: uppercase;
+    padding-top: 3px;
+  }
+  .verdict-tag {
+    display: inline-block;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    margin-top: 7px;
+  }
+  .verdict-tag.pass { background: var(--pass-soft); color: var(--pass); }
+  .verdict-tag.fail { background: var(--fail-soft); color: var(--fail); }
+  .verdict-tag.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .disclaimer {
+    margin-top: 22px;
+    padding: 14px 16px;
+    border: 1px solid var(--rule);
+    background: var(--paper-edge);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .disclaimer strong { color: var(--ink-soft); }
+
+  /* ---------- Methodology ---------- */
+  section.method {
+    border: 2px solid var(--ink);
+    border-top: none;
+    padding: 30px 28px 36px;
+  }
+  .method h2 {
+    font-size: 13px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--seal);
+    margin-bottom: 18px;
+  }
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 22px 30px;
+  }
+  .method-item h4 { font-size: 15px; margin-bottom: 5px; }
+  .method-item p { font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
+  .method-note {
+    margin-top: 22px;
+    font-size: 12.5px;
+    color: var(--muted);
+    max-width: 75ch;
+    line-height: 1.6;
+  }
+
+  footer.foot {
+    padding: 26px 0 50px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .check { animation: rise 0.32s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabs { margin-top: 22px; display: flex; gap: 0; }
+  .tab {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 9px 2px;
+    margin-right: 28px;
+    cursor: pointer;
+  }
+  .tab.active { color: var(--ink); border-bottom-color: var(--seal); }
+  .tab:hover { color: var(--ink); }
+
+  /* ---------- Batch ---------- */
+  .batch-intro { border: 2px solid var(--ink); border-bottom: none; padding: 20px 28px; }
+  .batch-intro p { font-size: 14px; color: var(--ink-soft); max-width: 88ch; line-height: 1.6; }
+  .batch-intro em { font-style: italic; color: var(--ink); }
+  .b-label-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    background: transparent;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px;
+    color: var(--ink);
+    padding: 6px 0 10px;
+    margin-bottom: 14px;
+    outline: none;
+  }
+  .b-label-input::placeholder { color: #b3ac9c; }
+  .b-label-input:focus { border-bottom-color: var(--seal); }
+  textarea#b-input { min-height: 300px; }
+  .b-hint { margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  #b-list { max-height: 540px; overflow-y: auto; }
+  .b-row {
+    border-bottom: 1px solid var(--rule);
+    padding: 13px 0;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .b-grade-chip {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-weight: 700;
+    font-size: 14px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 2px;
+  }
+  .b-row-label { font-size: 14px; font-weight: 600; }
+  .b-row-meta { font-size: 12px; color: var(--muted); font-family: 'SFMono-Regular', Consolas, monospace; }
+  .b-remove {
+    background: none; border: none; color: var(--muted);
+    font-family: 'SFMono-Regular', Consolas, monospace; font-size: 16px;
+    cursor: pointer; padding: 0 4px;
+  }
+  .b-remove:hover { color: var(--fail); }
+
+  /* ---------- Findings ---------- */
+  section.findings { border: 2px solid var(--ink); border-top: none; padding: 28px; }
+  .findings-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; }
+  .findings-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .findings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ghost.danger { color: var(--fail); border-color: #e6c9c5; }
+  .ghost.danger:hover { border-color: var(--fail); }
+
+  #f-summary { margin-bottom: 24px; }
+  .f-stat {
+    border-left: 3px solid var(--seal);
+    padding: 6px 0 6px 14px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .f-stat strong { font-weight: 600; }
+  .f-stat .pct { font-family: 'SFMono-Regular', Consolas, monospace; color: var(--seal); font-weight: 700; }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--rule); }
+  table#f-table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 12.5px; }
+  table#f-table th, table#f-table td {
+    border-bottom: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    padding: 9px 11px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  table#f-table th {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--paper-edge);
+    font-weight: 400;
+    vertical-align: bottom;
+  }
+  table#f-table td:first-child, table#f-table th:first-child {
+    text-align: left; position: sticky; left: 0; background: var(--paper);
+    font-weight: 600; font-family: inherit; font-size: 13px;
+  }
+  table#f-table th:first-child { background: var(--paper-edge); }
+  .cell { font-family: 'SFMono-Regular', Consolas, monospace; font-weight: 700; }
+  .cell.pass { color: var(--pass); }
+  .cell.fail { color: var(--fail); }
+  .cell.warn { color: var(--warn); }
+  .findings-note { margin-top: 20px; font-size: 12.5px; color: var(--muted); line-height: 1.6; max-width: 90ch; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper);
+    font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+    padding: 11px 18px; border-radius: 2px; opacity: 0; transition: opacity 0.2s;
+    pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ---------- Input mode toggle + drop zone ---------- */
+  .input-modes { display: flex; gap: 6px; margin-bottom: 14px; }
+  .imode {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.04em;
+    background: none; border: 1px solid var(--rule); color: var(--muted);
+    padding: 7px 12px; cursor: pointer;
+  }
+  .imode.active { border-color: var(--ink); color: var(--ink); background: var(--paper-edge); }
+  .imode:hover { color: var(--ink); }
+
+  .drop-zone {
+    border: 1.5px dashed var(--rule);
+    background: rgba(0,0,0,0.012);
+    padding: 28px 22px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: border-color 0.15s, background 0.15s;
+    min-height: 300px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  }
+  .drop-zone.dragging { border-color: var(--seal); background: var(--fail-soft); }
+  .drop-inner strong { display: block; font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+  .drop-inner span { font-size: 12.5px; color: var(--muted); line-height: 1.5; max-width: 42ch; display: inline-block; }
+  .drop-zone img.preview { max-width: 100%; max-height: 200px; border: 1px solid var(--rule); margin-bottom: 6px; }
+  .ocr-status {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px; color: var(--seal); margin-top: 6px;
+  }
+  .ocr-status.done { color: var(--pass); }
+  .ocr-bar {
+    height: 3px; background: var(--rule); margin-top: 10px; width: 220px; overflow: hidden;
+  }
+  .ocr-bar i { display: block; height: 100%; width: 0; background: var(--seal); transition: width 0.2s; }
+  .ocr-note {
+    font-size: 11.5px; color: var(--warn); background: var(--warn-soft);
+    padding: 8px 11px; margin-bottom: 12px; line-height: 1.5;
+    display: none;
+  }
+  .ocr-note.show { display: block; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Digital Personal Data Protection Act, 2023 · §5–§7</div>
+    <h1 class="title">The Consent Notice Grader</h1>
+    <p class="standfirst">Paste a privacy or consent notice. It is checked, clause by clause, against the consent and notice standards the DPDP Act actually sets — each verdict tied to the section it answers to.</p>
+    <div class="byline">
+      <span>A first-pass compliance screener</span>
+      <span>·</span>
+      <span>Built by Shruti Kanherkar</span>
+      <a href="#methodology">How it grades ↓</a>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="single">Grade one notice</button>
+      <button class="tab" data-tab="batch">Test many · build findings</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="view-single">
+  <div class="bench">
+    <div class="panel left">
+      <div class="panel-label"><span>The notice</span><span class="n" id="charcount">0 chars</span></div>
+      <div class="input-modes">
+        <button class="imode active" data-mode="text" data-target="single">Paste text</button>
+        <button class="imode" data-mode="image" data-target="single">From screenshot</button>
+      </div>
+      <div class="drop-zone" id="drop-single" style="display:none">
+        <input type="file" id="file-single" accept="image/*" hidden />
+        <div class="drop-inner">
+          <strong>Drop a screenshot here, or click to choose</strong>
+          <span>The text is read from the image in your browser — nothing is uploaded. Then check and fix it before grading.</span>
+        </div>
+        <div class="ocr-status" id="ocr-single" style="display:none"></div>
+      </div>
+      <textarea id="input" placeholder="Paste the privacy policy or consent notice here.
+
+Tip: paste the full consent / privacy section, not just the heading. The grader looks for the specific things the DPDP Act requires a notice to contain — itemised purposes, a withdrawal route, a grievance officer, and so on."></textarea>
+      <div class="ocr-note" id="ocrnote-single"><strong>Read from image — check it first.</strong> OCR is imperfect, especially on screenshots. Fix any misread words above before grading, since the grade is only as good as the text.</div>
+      <div class="controls">
+        <button class="run" id="run">Grade the notice</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+      <div class="samples">
+        <span>Try one:</span>
+        <a id="s-weak">a typical weak notice</a>
+        <a id="s-strong">a stronger notice</a>
+      </div>
+    </div>
+
+    <div class="panel right">
+      <div class="panel-label"><span>The verdict</span><span class="n" id="run-stamp"></span></div>
+      <div id="output">
+        <div class="empty">
+          <span class="big">No notice graded yet.</span>
+          Paste a consent notice on the left and the grader will return a section-by-section reading: what the DPDP Act requires, and whether this notice meets it. Every flag cites the provision it rests on.
+        </div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /view-single -->
+
+  <div id="view-batch" style="display:none">
+    <div class="batch-intro">
+      <p>Test real privacy notices one after another. Each is graded by the <em>same</em> rules as the single view; results stack into a comparison table and an anonymised findings summary you can take straight to a writeup. Nothing is named, stored, or sent — labels are yours to choose (e.g. “Retailer A”, “Fintech app 2”).</p>
+    </div>
+    <div class="bench batch-bench">
+      <div class="panel left">
+        <div class="panel-label"><span>Add a notice to the batch</span><span class="n" id="b-charcount">0 chars</span></div>
+        <input id="b-label" class="b-label-input" type="text" placeholder="Label (anonymised) — e.g. “E-commerce app 1”, “Bank A”" />
+        <div class="input-modes">
+          <button class="imode active" data-mode="text" data-target="batch">Paste text</button>
+          <button class="imode" data-mode="image" data-target="batch">From screenshot</button>
+        </div>
+        <div class="drop-zone" id="drop-batch" style="display:none">
+          <input type="file" id="file-batch" accept="image/*" hidden />
+          <div class="drop-inner">
+            <strong>Drop a screenshot here, or click to choose</strong>
+            <span>Text is read in your browser — nothing is uploaded. Check it before adding to the batch.</span>
+          </div>
+          <div class="ocr-status" id="ocr-batch" style="display:none"></div>
+        </div>
+        <textarea id="b-input" placeholder="Paste a real privacy / consent notice here, give it an anonymised label above, and add it to the batch. Repeat for as many as you like — 10 gives a solid pattern."></textarea>
+        <div class="ocr-note" id="ocrnote-batch"><strong>Read from image — check it first.</strong> Fix any misread words above before adding, since the grade is only as good as the text.</div>
+        <div class="controls">
+          <button class="run" id="b-add">Add to batch &amp; grade</button>
+          <button class="ghost" id="b-clear-input">Clear</button>
+        </div>
+        <p class="b-hint">Tip: paste the consent / data-collection section, not the entire legal page. Aim for the part that says what's collected, why, and how consent works.</p>
+      </div>
+      <div class="panel right">
+        <div class="panel-label"><span>The batch</span><span class="n" id="b-count">0 tested</span></div>
+        <div id="b-list">
+          <div class="empty"><span class="big">Batch is empty.</span>Add your first notice on the left. As you add more, a comparison table and a findings summary appear below.</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="findings" id="findings" style="display:none">
+      <div class="findings-head">
+        <h2>The pattern across <span id="f-n">0</span> notices</h2>
+        <div class="findings-actions">
+          <button class="ghost" id="f-copy">Copy findings as text</button>
+          <button class="ghost" id="f-export">Export batch (JSON)</button>
+          <button class="ghost danger" id="f-reset">Reset batch</button>
+        </div>
+      </div>
+      <div id="f-summary"></div>
+      <div class="table-scroll">
+        <table id="f-table"><thead></thead><tbody></tbody></table>
+      </div>
+      <p class="findings-note"><strong>Reporting honestly:</strong> these are patterns from a text screener, not legal rulings. When you write this up, describe what the notices say (“most relied on deemed consent”), not whether a named company “breaks the law.” Keep labels anonymised — the pattern is the story, not the target.</p>
+    </section>
+  </div><!-- /view-batch -->
+
+  <section class="method" id="methodology">
+    <h2>How it grades — the method, in the open</h2>
+    <div class="method-grid">
+      <div class="method-item">
+        <h4>Rule-based, not a black box</h4>
+        <p>Each check looks for the presence — or absence — of a specific element the Act requires a notice to contain. The logic is transparent and inspectable; there is no opaque score.</p>
+      </div>
+      <div class="method-item">
+        <h4>Tied to the statute</h4>
+        <p>Every verdict cites the section it answers to: §5 (notice), §6 (the standard of consent), §7 (legitimate uses), §8 (Data Fiduciary duties). A flag you can trace is a flag you can defend.</p>
+      </div>
+      <div class="method-item">
+        <h4>A screener, not an opinion</h4>
+        <p>It catches the structural failures that appear again and again — missing withdrawal routes, bundled consent, no grievance officer. It does not replace a lawyer's reading of the specific facts.</p>
+      </div>
+    </div>
+    <p class="method-note"><strong>On its limits:</strong> the grader reads text for required elements; it cannot judge whether a stated purpose is genuinely necessary, whether consent was freely given in practice, or how the notice operates in the actual product flow. Those are legal judgments. Treat a high grade as “clears the obvious bar,” not “compliant” — and a low grade as “has structural gaps worth a closer look.”</p>
+  </section>
+
+  <footer class="foot">
+    <span>Not legal advice · An educational screener built against the DPDP Act, 2023</span>
+    <span>Logic runs entirely in your browser — nothing you paste is sent anywhere</span>
+  </footer>
+</div>
+
+<script>
+// ============================================================
+//  DPDP Consent Notice Grader — transparent, rule-based checks
+//  Every rule maps to a specific requirement under the DPDP Act 2023.
+//  All analysis runs client-side; no text leaves the browser.
+// ============================================================
+
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+const charcount = document.getElementById('charcount');
+const runStamp = document.getElementById('run-stamp');
+
+input.addEventListener('input', () => {
+  charcount.textContent = input.value.length.toLocaleString() + ' chars';
+});
+
+// --- helper: does the text contain ANY of these patterns? ---
+function has(text, patterns) {
+  return patterns.some(p => p.test(text));
+}
+
+// --- The checks. Each returns pass / fail / warn with a reason. ---
+// status: 'pass' | 'fail' | 'warn'
+const RULES = [
+  {
+    id: 'purpose',
+    title: 'Specified, itemised purpose',
+    cite: 'DPDP §5(1)(i)',
+    requirement: 'The notice must describe the personal data collected and the specific purpose for processing it.',
+    test(t) {
+      const statesPurpose = has(t, [
+        /\bpurpose(s)?\b/i, /\bin order to\b/i, /\bfor the (purpose|reason)\b/i,
+        /\bwe (use|collect|process)[^.]{0,80}\b(to|for)\b/i
+      ]);
+      const itemised = has(t, [
+        /\b(following purposes|purposes are|listed below|each purpose|specified purpose)\b/i,
+        /[•\-\*]\s/  // bullet list present
+      ]);
+      const vague = has(t, [
+        /\b(any|all|various|other|business) purpose(s)?\b/i,
+        /\bas (we|the company) (may )?(deem|see) (fit|appropriate|necessary)\b/i,
+        /\bimprove (our )?(services|experience)\b/i
+      ]);
+      if (!statesPurpose) return { status: 'fail', note: 'No processing purpose is stated. The Act requires the notice to tell the person what their data is used for — a notice that omits purpose fails at the threshold.' };
+      if (vague && !itemised) return { status: 'warn', note: 'A purpose is stated but in open-ended terms ("business purposes", "to improve services", "as deemed fit"). DPDP requires the purpose to be specific; broad catch-alls likely do not meet the standard.' };
+      if (itemised) return { status: 'pass', note: 'Purposes appear to be itemised and specific, which is what §5 asks for.' };
+      return { status: 'warn', note: 'A purpose is stated but it is not clearly itemised. Consider listing each purpose separately so the specificity requirement is unambiguous.' };
+    }
+  },
+  {
+    id: 'consent-standard',
+    title: 'Free, specific, informed, unconditional consent',
+    cite: 'DPDP §6(1)',
+    requirement: 'Consent must be free, specific, informed, unconditional and unambiguous, with a clear affirmative action.',
+    test(t) {
+      const mentionsConsent = has(t, [/\bconsent\b/i, /\bagree\b/i, /\byou (agree|consent)\b/i]);
+      const bundled = has(t, [
+        /\bby (using|continuing to use|accessing|browsing)[^.]{0,60}\byou (agree|consent|accept)\b/i,
+        /\bdeemed (to have )?(consent|agreed|accepted)\b/i,
+        /\bcontinued use\b[^.]{0,40}\bconsent\b/i
+      ]);
+      const affirmative = has(t, [
+        /\b(tick|check)[^.]{0,20}\bbox\b/i, /\bclick[^.]{0,20}\b(agree|accept|i consent)\b/i,
+        /\bopt[- ]in\b/i, /\baffirmative\b/i, /\bexplicit consent\b/i
+      ]);
+      if (!mentionsConsent) return { status: 'fail', note: 'Consent is never addressed. Under DPDP, consent is the primary ground for processing — a notice silent on it cannot establish a lawful basis.' };
+      if (bundled) return { status: 'fail', note: '“By using the service you agree…” is deemed/bundled consent. §6 requires a clear affirmative action that is free and unconditional — consent inferred from mere use does not satisfy this.' };
+      if (affirmative) return { status: 'pass', note: 'The notice points to an affirmative act (opt-in / tick-box / explicit click), consistent with the §6 standard.' };
+      return { status: 'warn', note: 'Consent is mentioned but the mechanism is unclear. §6 needs a clear affirmative action — spell out how consent is captured (e.g. an unticked opt-in box).' };
+    }
+  },
+  {
+    id: 'withdrawal',
+    title: 'Right to withdraw — as easy as giving',
+    cite: 'DPDP §6(4)–(6)',
+    requirement: 'The person must be able to withdraw consent, and withdrawing must be as easy as giving it.',
+    test(t) {
+      // Genuine consent withdrawal — must reference consent, not just marketing prefs
+      const genuineWithdraw = has(t, [
+        /\bwithdraw[^.]{0,30}\bconsent\b/i, /\bconsent[^.]{0,30}\bwithdraw/i,
+        /\brevoke[^.]{0,30}\bconsent\b/i, /\bwithdraw your consent\b/i
+      ]);
+      // Marketing-only opt-out — NOT the same as withdrawing consent under §6
+      const marketingOnly = has(t, [
+        /\bunsubscribe\b/i, /\bopt[- ]out of (marketing|promotional|emails)\b/i,
+        /\bmarketing (emails|communications)\b[^.]{0,40}\b(opt|unsubscribe)\b/i
+      ]);
+      // Any withdrawal language at all
+      const anyWithdraw = genuineWithdraw || has(t, [/\bwithdraw\b/i, /\brevoke\b/i, /\bopt[- ]out\b/i]);
+      // Parity: as easy as giving (the §6(6) standard) — "at any time" alone is NOT parity
+      const parity = has(t, [
+        /\bas easy as\b/i, /\bas straightforward as\b/i, /\bas simple as\b/i,
+        /\bsame (ease|manner)[^.]{0,30}\b(giv|grant|provid)/i,
+        /\bno (harder|more difficult)\b/i
+      ]);
+      const howToWithdraw = has(t, [
+        /\b(settings|account|profile|preferences)\b[^.]{0,40}\b(withdraw|consent|privacy)\b/i,
+        /\bwithdraw[^.]{0,40}\b(settings|account|profile|by (writing|emailing|contacting))\b/i
+      ]);
+
+      if (!anyWithdraw && !marketingOnly) {
+        return { status: 'fail', note: 'No withdrawal route is offered at all. The right to withdraw consent is express in §6(4); a notice with no way to withdraw fails a core requirement.' };
+      }
+      if (marketingOnly && !genuineWithdraw) {
+        return { status: 'fail', note: 'Only a marketing opt-out / unsubscribe is offered — that is not the same as withdrawing consent. §6(4) gives the right to withdraw consent for processing generally, not just to stop marketing emails. This is one of the most common gaps.' };
+      }
+      if (genuineWithdraw && parity) {
+        return { status: 'pass', note: 'Consent withdrawal is offered and framed as being as easy as giving it — the §6(6) parity standard.' };
+      }
+      if (genuineWithdraw && howToWithdraw) {
+        return { status: 'warn', note: 'Consent withdrawal is offered with a route, but parity is not stated. §6(6) requires withdrawal to be as easy as giving consent — say so explicitly, not just "at any time".' };
+      }
+      return { status: 'warn', note: 'Withdrawal is mentioned but neither the parity standard (§6(6): as easy as giving) nor a concrete route is clear. Spell out where and how, and confirm it is no harder than opting in.' };
+    }
+  },
+  {
+    id: 'grievance',
+    title: 'Grievance redressal / contact for the Data Fiduciary',
+    cite: 'DPDP §8(10) & §13',
+    requirement: 'A readily available means of grievance redressal, and contact details of a person who can answer data questions.',
+    test(t) {
+      const grievance = has(t, [/\bgrievance\b/i, /\bcomplaint(s)?\b/i, /\bredress(al)?\b/i]);
+      const contact = has(t, [
+        /\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/i,  // an email
+        /\bcontact (us|our)\b/i, /\bdata protection officer\b/i, /\bgrievance officer\b/i
+      ]);
+      if (grievance && contact) return { status: 'pass', note: 'A grievance mechanism and a contact point are both present — meeting §8(10)/§13.' };
+      if (contact && !grievance) return { status: 'warn', note: 'A contact is given but no grievance process is named. §8(10) expects a readily available redressal route, not just a general contact — name it.' };
+      if (grievance && !contact) return { status: 'warn', note: 'A grievance process is mentioned but no concrete contact (email / officer) is given. Provide the actual point of contact.' };
+      return { status: 'fail', note: 'Neither a grievance route nor a contact for data questions is provided. Both are required — §8(10) (redressal) and §13 (Consent Manager / contactability).' };
+    }
+  },
+  {
+    id: 'rights',
+    title: 'Data principal rights stated',
+    cite: 'DPDP §11–§14',
+    requirement: 'The person should be informed of their rights: access, correction, erasure, grievance, and nomination.',
+    test(t) {
+      const access = has(t, [/\b(right to )?access\b/i, /\bobtain[^.]{0,30}\bcopy\b/i]);
+      const correction = has(t, [/\bcorrect(ion)?\b/i, /\brectif/i, /\bupdate your (data|information)\b/i]);
+      const erasure = has(t, [/\berasure\b/i, /\bdelet(e|ion)\b/i, /\bright to be forgotten\b/i]);
+      const score = [access, correction, erasure].filter(Boolean).length;
+      if (score >= 2) return { status: 'pass', note: 'The notice informs the person of their rights (access / correction / erasure), as Chapter III contemplates.' };
+      if (score === 1) return { status: 'warn', note: 'Only one data-principal right is mentioned. §11–§14 give the person several (access, correction, erasure, grievance, nomination) — the notice should set them out.' };
+      return { status: 'fail', note: 'The notice does not tell the person what rights they have over their data. Informing them of access, correction, erasure and grievance rights is part of a compliant notice.' };
+    }
+  },
+  {
+    id: 'children',
+    title: 'Children & verifiable parental consent',
+    cite: 'DPDP §9',
+    requirement: 'For data of children (under 18), verifiable consent of a parent/guardian is required; no tracking or targeted ads at children.',
+    test(t) {
+      const mentionsChildren = has(t, [/\bchild(ren)?\b/i, /\bminor(s)?\b/i, /\bunder (the age of )?(18|eighteen)\b/i, /\bparental\b/i]);
+      const verifiable = has(t, [/\bverifiable[^.]{0,20}\bconsent\b/i, /\bparent(al)? (or guardian )?consent\b/i, /\bguardian\b/i]);
+      if (mentionsChildren && verifiable) return { status: 'pass', note: 'The notice addresses children and points to verifiable parental/guardian consent — the §9 requirement.' };
+      if (mentionsChildren && !verifiable) return { status: 'warn', note: 'Children are mentioned but verifiable parental consent is not clearly addressed. §9 requires it where children\'s data is processed.' };
+      return { status: 'warn', note: 'The notice is silent on children. If the service may be used by anyone under 18, §9 requires verifiable parental consent and bars tracking / targeted advertising directed at children — address it explicitly.' };
+    }
+  },
+  {
+    id: 'retention',
+    title: 'Retention & erasure on purpose completion',
+    cite: 'DPDP §8(7)',
+    requirement: 'Data should be erased once the purpose is served and retention is no longer necessary (or required by law).',
+    test(t) {
+      const retention = has(t, [/\bretain(ed|ing|tion)?\b/i, /\bhow long\b/i, /\bstorage period\b/i, /\bkeep your (data|information)\b/i]);
+      const eraseOnDone = has(t, [
+        /\b(erase|delete)[^.]{0,60}\b(no longer|once|when)[^.]{0,40}\b(necessary|required|purpose)\b/i,
+        /\bpurpose[^.]{0,30}\b(served|completed|fulfilled)\b/i,
+        /\bonce (the )?purpose[^.]{0,30}\b(erase|delete)/i
+      ]);
+      // Indefinite / account-life retention is NOT the §8(7) standard on its own
+      const indefinite = has(t, [
+        /\bas long as (your )?(account is active|you (use|have))\b/i,
+        /\bindefinitely\b/i, /\bfor as long as (necessary )?for (our )?business\b/i,
+        /\bretain[^.]{0,40}\b(permanently|indefinitely)\b/i
+      ]);
+      if (retention && eraseOnDone) return { status: 'pass', note: 'Retention is addressed and tied to erasure once the purpose is served — consistent with §8(7).' };
+      if (indefinite && !eraseOnDone) return { status: 'warn', note: 'Retention is tied to account life or framed as indefinite, not to the purpose being served. §8(7) requires erasure once the specified purpose is no longer being served — "as long as your account is active" does not, by itself, meet that.' };
+      if (retention) return { status: 'warn', note: 'Retention is mentioned but not clearly tied to erasure when the purpose ends. §8(7) expects deletion once retention is no longer necessary — state the trigger.' };
+      return { status: 'fail', note: 'No retention or deletion position is stated. §8(7) requires erasure when the purpose is served; a notice should say how long data is kept and when it is deleted.' };
+    }
+  },
+  {
+    id: 'breach',
+    title: 'Personal data breach intimation',
+    cite: 'DPDP §8(6)',
+    requirement: 'In the event of a breach, the Data Fiduciary must notify the Board and each affected Data Principal.',
+    test(t) {
+      const breach = has(t, [/\bbreach\b/i, /\bsecurity incident\b/i, /\bunauthori[sz]ed (access|disclosure)\b/i]);
+      const notify = has(t, [/\bnotif(y|ication)\b/i, /\binform you\b/i, /\bintimat/i, /\balert\b/i]);
+      if (breach && notify) return { status: 'pass', note: 'The notice addresses breach notification to affected persons — reflecting the §8(6) duty.' };
+      if (breach) return { status: 'warn', note: 'A breach is mentioned but notification of affected persons is not clear. §8(6) requires intimation to the Board and each affected Data Principal — say so.' };
+      return { status: 'warn', note: 'The notice does not mention breach notification. §8(6) requires it; consider stating that affected users and the Board will be informed of a personal data breach.' };
+    }
+  }
+];
+
+// --- Grading ---
+function grade(text) {
+  const t = ' ' + text.replace(/\s+/g, ' ') + ' ';
+  const results = RULES.map(r => {
+    const out = r.test(t);
+    return { ...r, ...out };
+  });
+
+  // weighting: fails on core consent rules hurt most
+  const coreIds = ['consent-standard', 'withdrawal', 'purpose'];
+  let points = 0, max = 0;
+  results.forEach(r => {
+    const weight = coreIds.includes(r.id) ? 2 : 1;
+    max += weight * 2;
+    if (r.status === 'pass') points += weight * 2;
+    else if (r.status === 'warn') points += weight * 1;
+  });
+  const pct = Math.round((points / max) * 100);
+
+  let letter, verdict;
+  if (pct >= 85) { letter = 'A'; verdict = 'Clears the obvious bar'; }
+  else if (pct >= 70) { letter = 'B'; verdict = 'Mostly there — fixable gaps'; }
+  else if (pct >= 55) { letter = 'C'; verdict = 'Real structural gaps'; }
+  else if (pct >= 35) { letter = 'D'; verdict = 'Falls short on core duties'; }
+  else { letter = 'F'; verdict = 'Fails the threshold tests'; }
+
+  return { results, pct, letter, verdict };
+}
+
+function render(text) {
+  if (text.trim().length < 40) {
+    output.innerHTML = `<div class="empty"><span class="big">That is too short to read.</span>Paste the full consent or privacy section — the grader needs the actual text to check for the required elements.</div>`;
+    runStamp.textContent = '';
+    return;
+  }
+
+  const { results, pct, letter, verdict } = grade(text);
+  const fails = results.filter(r => r.status === 'fail').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const passes = results.filter(r => r.status === 'pass').length;
+
+  const markGlyph = { pass: '✓', fail: '✕', warn: '!' };
+  const tagText = { pass: 'meets', fail: 'fails', warn: 'partial' };
+
+  let html = `
+    <div class="score-head">
+      <div class="grade" style="color:${pct>=70?'var(--pass)':pct>=55?'var(--warn)':'var(--fail)'}">${letter}<small>${pct}/100</small></div>
+      <div class="score-meta">
+        <strong>${verdict}.</strong><br>
+        ${passes} met · ${warns} partial · ${fails} failed, across ${results.length} statutory checks.
+      </div>
+    </div>
+    <div class="checks">
+  `;
+
+  results.forEach((r, i) => {
+    html += `
+      <div class="check" style="animation-delay:${i*0.04}s">
+        <div class="mark ${r.status}">${markGlyph[r.status]}</div>
+        <div class="check-body">
+          <h3>${r.title}</h3>
+          <p>${r.note}</p>
+          <span class="verdict-tag ${r.status}">${tagText[r.status]}</span>
+        </div>
+        <div class="cite">${r.cite}</div>
+      </div>
+    `;
+  });
+
+  html += `</div>
+    <div class="disclaimer">
+      <strong>Read this before quoting the grade.</strong> This is an automated first-pass screener that reads text for the elements the DPDP Act requires a notice to contain. It cannot judge whether a purpose is genuinely necessary, whether consent is free in practice, or how the notice behaves in the live product. A high grade means “clears the obvious structural bar,” not “compliant.” Not legal advice.
+    </div>
+  `;
+
+  output.innerHTML = html;
+  const now = new Date();
+  runStamp.textContent = 'graded ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+document.getElementById('run').addEventListener('click', () => render(input.value));
+document.getElementById('clear').addEventListener('click', () => {
+  input.value = ''; charcount.textContent = '0 chars';
+  output.innerHTML = `<div class="empty"><span class="big">Cleared.</span>Paste another notice to grade it.</div>`;
+  runStamp.textContent = '';
+});
+
+// --- Sample notices (illustrative, written for the demo) ---
+const WEAK = `Privacy Policy
+
+By using our app and continuing to access our services, you agree to this policy and consent to our collection and use of your information.
+
+We collect your information to provide and improve our services, for business purposes, and for any other purposes we may deem appropriate from time to time. We may share your data with our partners.
+
+We take your privacy seriously and use reasonable security measures. For any questions, contact our support team.`;
+
+const STRONG = `Privacy & Consent Notice
+
+What we collect and why. We collect your name, email and phone number for the following specific purposes, each of which you can consent to separately:
+• to create and manage your account;
+• to process payments you authorise;
+• to send service-related notifications.
+
+How we obtain consent. We ask for your consent through an explicit, unticked opt-in box before processing. Your consent is sought for each purpose and is never bundled with use of the service.
+
+Withdrawing consent. You may withdraw your consent at any time from Settings → Privacy, and withdrawing is as easy as giving it. Withdrawal does not affect processing already carried out.
+
+Your rights. You have the right to access a copy of your data, to seek correction of inaccurate data, and to request erasure of your data. You may also nominate another individual to exercise your rights.
+
+Retention and erasure. We retain your data only as long as necessary for the purpose above, and we erase it once the purpose is served or you withdraw consent, unless the law requires us to retain it.
+
+Children. Our service is not directed at children under 18. Where we process a child's data, we obtain verifiable consent from a parent or guardian, and we do not track children or direct advertising at them.
+
+If something goes wrong. In the event of a personal data breach, we will notify you and the Data Protection Board as required.
+
+Grievance redressal. If you have a complaint about how we handle your data, our Grievance Officer will respond. Contact: grievance@example.in.`;
+
+document.getElementById('s-weak').addEventListener('click', () => {
+  input.value = WEAK; charcount.textContent = WEAK.length.toLocaleString()+' chars'; render(WEAK);
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+document.getElementById('s-strong').addEventListener('click', () => {
+  input.value = STRONG; charcount.textContent = STRONG.length.toLocaleString()+' chars'; render(STRONG);
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+// ============================================================
+//  TABS
+// ============================================================
+const tabs = document.querySelectorAll('.tab');
+const viewSingle = document.getElementById('view-single');
+const viewBatch = document.getElementById('view-batch');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const which = tab.dataset.tab;
+    viewSingle.style.display = which === 'single' ? '' : 'none';
+    viewBatch.style.display = which === 'batch' ? '' : 'none';
+  });
+});
+
+// ============================================================
+//  BATCH MODE  — reuses grade() so rules are identical
+// ============================================================
+const bInput = document.getElementById('b-input');
+const bLabel = document.getElementById('b-label');
+const bChar = document.getElementById('b-charcount');
+const bList = document.getElementById('b-list');
+const bCount = document.getElementById('b-count');
+const findings = document.getElementById('findings');
+
+let batch = []; // { label, grade, pct, results:[{id,title,cite,status}] }
+
+bInput.addEventListener('input', () => {
+  bChar.textContent = bInput.value.length.toLocaleString() + ' chars';
+});
+
+function toast(msg) {
+  let el = document.querySelector('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+document.getElementById('b-add').addEventListener('click', () => {
+  const text = bInput.value.trim();
+  if (text.length < 40) { toast('Paste a longer notice first'); return; }
+  const label = bLabel.value.trim() || `Notice ${batch.length + 1}`;
+  const { results, pct, letter } = grade(text);
+  batch.push({
+    label,
+    grade: letter,
+    pct,
+    results: results.map(r => ({ id: r.id, title: r.title, cite: r.cite, status: r.status }))
+  });
+  bInput.value = ''; bLabel.value = ''; bChar.textContent = '0 chars';
+  renderBatch();
+  toast(`Added “${label}” — graded ${letter}`);
+});
+
+document.getElementById('b-clear-input').addEventListener('click', () => {
+  bInput.value = ''; bLabel.value = ''; bChar.textContent = '0 chars';
+});
+
+function gradeColor(pct) {
+  return pct >= 70 ? 'var(--pass)' : pct >= 55 ? 'var(--warn)' : 'var(--fail)';
+}
+function gradeBg(pct) {
+  return pct >= 70 ? 'var(--pass-soft)' : pct >= 55 ? 'var(--warn-soft)' : 'var(--fail-soft)';
+}
+
+function renderBatch() {
+  bCount.textContent = batch.length + ' tested';
+  if (batch.length === 0) {
+    bList.innerHTML = `<div class="empty"><span class="big">Batch is empty.</span>Add your first notice on the left.</div>`;
+    findings.style.display = 'none';
+    return;
+  }
+  bList.innerHTML = batch.map((b, i) => `
+    <div class="b-row">
+      <div class="b-grade-chip" style="color:${gradeColor(b.pct)};background:${gradeBg(b.pct)}">${b.grade}</div>
+      <div>
+        <div class="b-row-label">${escapeHtml(b.label)}</div>
+        <div class="b-row-meta">${b.pct}/100 · ${b.results.filter(r=>r.status==='fail').length} failed · ${b.results.filter(r=>r.status==='warn').length} partial</div>
+      </div>
+      <button class="b-remove" data-i="${i}" title="Remove">✕</button>
+    </div>
+  `).join('');
+  bList.querySelectorAll('.b-remove').forEach(btn => {
+    btn.addEventListener('click', () => { batch.splice(+btn.dataset.i, 1); renderBatch(); });
+  });
+  renderFindings();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderFindings() {
+  findings.style.display = '';
+  document.getElementById('f-n').textContent = batch.length;
+  const n = batch.length;
+  const checkDefs = RULES.map(r => ({ id: r.id, title: r.title, cite: r.cite }));
+
+  // aggregate failures + partials per check
+  const agg = checkDefs.map(def => {
+    let fail = 0, warn = 0, pass = 0;
+    batch.forEach(b => {
+      const r = b.results.find(x => x.id === def.id);
+      if (!r) return;
+      if (r.status === 'fail') fail++;
+      else if (r.status === 'warn') warn++;
+      else pass++;
+    });
+    return { ...def, fail, warn, pass, gap: fail + warn };
+  });
+
+  // summary: the checks most commonly failed
+  const sorted = [...agg].sort((a, b) => b.fail - a.fail);
+  const avgPct = Math.round(batch.reduce((s, b) => s + b.pct, 0) / n);
+  const gradeDist = {};
+  batch.forEach(b => gradeDist[b.grade] = (gradeDist[b.grade] || 0) + 1);
+  const distStr = ['A','B','C','D','F'].filter(g=>gradeDist[g]).map(g => `${gradeDist[g]}×${g}`).join(', ');
+
+  let summary = `<div class="f-stat">Across <strong>${n}</strong> notice${n>1?'s':''}, the average grade was <span class="pct">${avgPct}/100</span> (${distStr}).</div>`;
+  const topFails = sorted.filter(s => s.fail > 0).slice(0, 3);
+  if (topFails.length) {
+    summary += topFails.map(s =>
+      `<div class="f-stat"><span class="pct">${s.fail}/${n}</span> failed <strong>${s.title}</strong> <span style="color:var(--muted);font-family:monospace;font-size:12px">(${s.cite})</span></div>`
+    ).join('');
+  }
+  document.getElementById('f-summary').innerHTML = summary;
+
+  // table
+  const glyph = { pass: '✓', warn: '!', fail: '✕' };
+  const thead = document.querySelector('#f-table thead');
+  const tbody = document.querySelector('#f-table tbody');
+  thead.innerHTML = `<tr><th>Check</th>${batch.map(b => `<th>${escapeHtml(b.label)}<br><span style="color:${gradeColor(b.pct)}">${b.grade}</span></th>`).join('')}<th>fail rate</th></tr>`;
+  tbody.innerHTML = agg.map(def => {
+    const cells = batch.map(b => {
+      const r = b.results.find(x => x.id === def.id);
+      const st = r ? r.status : 'warn';
+      return `<td class="cell ${st}">${glyph[st]}</td>`;
+    }).join('');
+    const rate = Math.round((def.fail / n) * 100);
+    return `<tr><td>${def.title}<br><span style="color:var(--muted);font-family:monospace;font-size:10px">${def.cite}</span></td>${cells}<td class="cell" style="color:${rate>=50?'var(--fail)':'var(--muted)'}">${rate}%</td></tr>`;
+  }).join('');
+}
+
+// --- Findings: copy as text ---
+document.getElementById('f-copy').addEventListener('click', () => {
+  const n = batch.length;
+  const checkDefs = RULES.map(r => r.id);
+  const agg = RULES.map(r => {
+    let fail = 0, warn = 0;
+    batch.forEach(b => { const x = b.results.find(y=>y.id===r.id); if(x){ if(x.status==='fail')fail++; else if(x.status==='warn')warn++; }});
+    return { title: r.title, cite: r.cite, fail, warn };
+  }).sort((a,b)=>b.fail-a.fail);
+  const avgPct = Math.round(batch.reduce((s,b)=>s+b.pct,0)/n);
+  let txt = `DPDP consent-notice screening — ${n} real notices tested\n`;
+  txt += `Average grade: ${avgPct}/100\n\n`;
+  txt += `Most common gaps:\n`;
+  agg.filter(a=>a.fail+a.warn>0).forEach(a => {
+    txt += `• ${a.fail}/${n} failed, ${a.warn}/${n} partial — ${a.title} (${a.cite})\n`;
+  });
+  txt += `\n(Patterns from a first-pass text screener, not legal rulings. Notices anonymised.)`;
+  navigator.clipboard.writeText(txt).then(()=>toast('Findings copied'));
+});
+
+// --- Export batch as JSON ---
+document.getElementById('f-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(batch, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dpdp-batch-findings.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported batch JSON');
+});
+
+// --- Reset ---
+document.getElementById('f-reset').addEventListener('click', () => {
+  if (batch.length && !confirm('Clear all tested notices from this batch?')) return;
+  batch = []; renderBatch();
+});
+
+// ============================================================
+//  SELF-RUNNING DEMO  — for the 60s screen recording
+//  Auto-types a notice, then reveals the verdict. Single-view only.
+// ============================================================
+const DEMO_NOTICE = `Privacy Policy
+
+By using our app and continuing to access our services, you agree to this policy and consent to our collection and use of your information.
+
+We collect your information to provide and improve our services, for business purposes, and for any other purposes we may deem appropriate from time to time. We may share your data with our partners.
+
+We take your privacy seriously and use reasonable security measures. For any questions, contact our support team.`;
+
+function typeText(el, text, done) {
+  el.value = ''; let i = 0;
+  const step = () => {
+    // type in small chunks so 300+ chars finishes in ~6s
+    i += 3;
+    el.value = text.slice(0, i);
+    charcount.textContent = el.value.length.toLocaleString() + ' chars';
+    if (i < text.length) setTimeout(step, 18);
+    else done && done();
+  };
+  step();
+}
+
+const demoBtn = document.createElement('a');
+demoBtn.textContent = '▶ watch it work';
+demoBtn.style.cursor = 'pointer';
+demoBtn.id = 's-demo';
+document.querySelector('.samples').appendChild(document.createTextNode(' '));
+document.querySelector('.samples').appendChild(demoBtn);
+demoBtn.addEventListener('click', () => {
+  // ensure single view
+  document.querySelector('.tab[data-tab="single"]').click();
+  window.scrollTo({top:0, behavior:'smooth'});
+  output.innerHTML = `<div class="empty"><span class="big">Reading the notice…</span>Grading against the DPDP Act, clause by clause.</div>`;
+  typeText(input, DEMO_NOTICE, () => {
+    setTimeout(() => render(DEMO_NOTICE), 500);
+  });
+});
+
+// ============================================================
+//  INPUT MODE TOGGLE  (text  /  from screenshot)
+// ============================================================
+document.querySelectorAll('.imode').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.target;   // 'single' | 'batch'
+    const mode = btn.dataset.mode;       // 'text' | 'image'
+    // toggle active state within this target's group
+    document.querySelectorAll(`.imode[data-target="${target}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const drop = document.getElementById('drop-' + target);
+    const ta = target === 'single' ? document.getElementById('input') : document.getElementById('b-input');
+    if (mode === 'image') { drop.style.display = 'flex'; ta.style.display = 'none'; }
+    else { drop.style.display = 'none'; ta.style.display = ''; }
+  });
+});
+
+// ============================================================
+//  OCR  — client-side, via Tesseract.js. Image never leaves browser.
+// ============================================================
+function wireDropZone(target) {
+  const drop = document.getElementById('drop-' + target);
+  const fileInput = document.getElementById('file-' + target);
+  const status = document.getElementById('ocr-' + target);
+  const note = document.getElementById('ocrnote-' + target);
+  const ta = target === 'single' ? document.getElementById('input') : document.getElementById('b-input');
+  const counter = target === 'single' ? charcount : document.getElementById('b-charcount');
+
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragging'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragging'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragging');
+    if (e.dataTransfer.files[0]) handleImage(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImage(e.target.files[0]); });
+
+  async function handleImage(file) {
+    if (!file.type.startsWith('image/')) { toast('That is not an image file'); return; }
+    if (typeof Tesseract === 'undefined') {
+      status.style.display = 'block';
+      status.classList.remove('done');
+      status.innerHTML = 'OCR library could not load. Check your connection, or switch to “Paste text” and paste the notice directly.';
+      return;
+    }
+    // preview
+    const reader = new FileReader();
+    reader.onload = ev => {
+      drop.querySelector('.drop-inner').innerHTML =
+        `<img class="preview" src="${ev.target.result}" alt="preview" />` +
+        `<span>Reading text from this image…</span>`;
+    };
+    reader.readAsDataURL(file);
+
+    status.style.display = 'block';
+    status.classList.remove('done');
+    status.innerHTML = `Reading text…<div class="ocr-bar"><i id="bar-${target}"></i></div>`;
+    const bar = document.getElementById('bar-' + target);
+
+    try {
+      const worker = await Tesseract.createWorker('eng', 1, {
+        logger: m => {
+          if (m.status === 'recognizing text' && bar) bar.style.width = Math.round(m.progress * 100) + '%';
+        }
+      });
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+
+      const cleaned = text.replace(/\n{3,}/g, '\n\n').trim();
+      // switch back to text view so the user can edit
+      document.querySelector(`.imode[data-target="${target}"][data-mode="text"]`).click();
+      ta.value = cleaned;
+      counter.textContent = cleaned.length.toLocaleString() + ' chars';
+      note.classList.add('show');
+      status.classList.add('done');
+      status.innerHTML = '✓ Text extracted — now check and fix it above.';
+      if (cleaned.length < 40) {
+        status.innerHTML = '✓ Read, but very little text found. Try a clearer or larger screenshot, or paste the text directly.';
+      }
+      toast('Text extracted from image');
+    } catch (err) {
+      status.classList.remove('done');
+      status.innerHTML = 'Could not read this image. Try a clearer screenshot, or switch to “Paste text”.';
+      console.error('OCR error:', err);
+    }
+  }
+}
+wireDropZone('single');
+wireDropZone('batch');
+
+// hide the OCR note again when the user edits the text manually after a while
+['input', 'b-input'].forEach(id => {
+  const el = document.getElementById(id);
+  const note = document.getElementById('ocrnote-' + (id === 'input' ? 'single' : 'batch'));
+  // keep note visible (it's a useful reminder) but allow dismiss on focus-out if empty
+  el.addEventListener('input', () => { if (!el.value.trim()) note.classList.remove('show'); });
+});
+</script>
+</body>
+</html>
